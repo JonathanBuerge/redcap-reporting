@@ -1,0 +1,1 @@
+Dieses Verzeichnis enthält den Code für die Verarbeitung von REDCap-Daten und die Erstellung von Berichten.
