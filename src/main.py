@@ -7,12 +7,12 @@ from utils import ensure_patient_dirs
 # ----------------------------
 # Konfiguration
 # ----------------------------
-DATA_FILE = "./data/Rothdecade_DATA_2025-09-02_1432.csv"
+DATA_FILE = "./data/anonym.csv"
 REPORTS_BASE = "./reports"
 MEASURE_COLS = ["crf_mns_t1", "crf_mns_t2", "crf_mns_t3", "crf_mns_t4", "crf_mns_t5"]
 
 # Hier kannst du Patienten einfach eintragen:
-PATIENTS = [6, 7, 10]  # z. B. Zeile 7, 8, 11 (0-basiert!)
+PATIENTS = [5, 6, 10]  #0-basiert und ohne header-zeile also MINUS 2!! //ID Korrektur als funktion machen??
 
 # ----------------------------
 # Workflow
@@ -28,7 +28,7 @@ def main():
         patient_values = analyzer.get_patient_values(patient_index)
 
         # Patient-Ordner erstellen
-        patient_dir, plots_dir = ensure_patient_dirs(REPORTS_BASE, patient_index + 1)
+        patient_dir, plots_dir = ensure_patient_dirs(REPORTS_BASE, patient_index + 2)
 
         # Plot speichern
         plot_file = f"{plots_dir}/boxplot.png"
