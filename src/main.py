@@ -6,12 +6,13 @@ import pandas as pd
 import json
 import os
 import warnings
+import traceback
 
 # Unterdrückt Pandas Warnungen für sauberen Output
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 # ----------------------------
-# Konfiguration
+# 1. KONFIGURATION
 # ----------------------------
 DATA_FILE = "./data/anonym.csv"
 REPORTS_BASE = "./reports"
@@ -19,103 +20,105 @@ REPORTS_BASE = "./reports"
 # Nur für diese IDs gibt es detaillierte Konsolen-Ausgaben
 DEBUG_IDS = ["decad_105", "105"]
 
+# DEFINITION DER PLOTS (Reihenfolge hier = Reihenfolge im PDF)
+# Format: (Interner_Name_im_Analyzer, Dateiname_für_Plot)
+PLOTS_CONFIG = [
+    ("sprung", "sprung_ref.png"),
+    ("pmax_rel", "pmax_rel_ref.png"), 
+    ("vo2max", "vo2_ref.png"),
+    ("mtp_rel", "mtp_rel_ref.png"),         # IMTP Kreuzheben Relativ
+    ("leg_ext_rel", "leg_ext_rel_ref.png")  # Beinstrecker Relativ
+]
+
+# ----------------------------
+# 2. HILFSFUNKTION (Logger)
+# ----------------------------
+def debug_log(patient_id, message):
+    """Gibt die Nachricht nur aus, wenn die ID in der Debug-Liste steht."""
+    if str(patient_id) in DEBUG_IDS:
+        print(message)
+
+# ----------------------------
+# 3. HAUPT-WORKFLOW
+# ----------------------------
 def main():
     print(f"🚀 Starte DECADE Reporting (Alle Patienten)...")
-    print(f"ℹ️  Detail-Logs nur für: {DEBUG_IDS}")
+    print(f"ℹ️  Detail-Logs nur für: {DEBUG_IDS}\n")
 
-    # 1. Daten laden
+    # Daten laden
     try:
         df = pd.read_csv(DATA_FILE, sep=None, engine='python')
     except Exception as e:
         print(f"❌ Kritischer Fehler beim Laden der CSV: {e}")
         return
 
-    # 2. Analyzer initialisieren
     analyzer = Analyzer(df)
     all_ids = analyzer.get_all_patient_ids()
     print(f"👥 {len(all_ids)} Patienten in CSV gefunden.\n")
 
-    # 3. Schleife über ALLE Patienten
     count = 0
-    for p_id in all_ids:
-        # ID sicher als String für Vergleiche
-        str_id = str(p_id)
-        
-        # Flag: Sollen wir für diesen Patienten loggen?
-        is_debug = str_id in DEBUG_IDS
+    viz = Visualizer() # Visualizer einmal initialisieren reicht
 
-        if is_debug:
-            print(f"--- BEARBEITE PATIENT {str_id} ---")
+    for p_id in all_ids:
+        str_id = str(p_id)
+        debug_log(str_id, f"--- BEARBEITE PATIENT {str_id} ---")
 
         # Ordner erstellen
         patient_dir, plots_dir = ensure_patient_dirs(REPORTS_BASE, str_id)
 
-        # Daten holen (inkl. Alter-Berechnung)
+        # Daten vom Analyzer holen
         metrics_data = analyzer.get_patient_data(p_id)
         
         if not metrics_data:
-            if is_debug: print("❌ Keine Daten gefunden.")
+            debug_log(str_id, "❌ Keine Daten gefunden.")
             continue
 
-        # --- LOGGING (Nur wenn Debug) ---
         p_age = metrics_data["meta"].get("age")
         p_sex = metrics_data["meta"].get("sex", "girls")
         
-        if is_debug:
-            print(f"   📋 Metadaten: Geschlecht={p_sex}, Alter={p_age}")
-            if p_age is None:
-                print("   ⚠️  WARNUNG: Alter konnte nicht berechnet werden (Prüfe 'crf_timestamp'/'crf_geb')")
+        debug_log(str_id, f"   📋 Metadaten: Geschlecht={p_sex}, Alter={p_age}")
+        if p_age is None:
+            debug_log(str_id, "   ⚠️  WARNUNG: Alter fehlt! (Plots benötigen ein Alter)")
 
-        # --- VISUALISIERUNG ---
+        # --- DYNAMISCHE PLOT-GENERIERUNG ---
         plot_files = []
-        viz = Visualizer()
         
-        # A) Sprunghöhe
-        # Wir holen jetzt 'history' statt 'post'
-        hist_sprung = metrics_data.get("sprung", {}).get("history", [])
-        
-        # Check: Liste darf nicht leer sein
-        if hist_sprung:
-            plot_path = f"{plots_dir}/sprung_ref.png"
-            try:
-                # Übergabe der ganzen Historie an den Visualizer
-                viz.create_reference_plot("sprung", hist_sprung, p_sex, plot_path)
+        for metric_key, filename in PLOTS_CONFIG:
+            # Versuche, die Historie für diese Metrik zu holen
+            hist_data = metrics_data.get(metric_key, {}).get("history", [])
+            
+            if hist_data and p_age is not None:
+                plot_path = f"{plots_dir}/{filename}"
+                try:
+                    # Plot zeichnen lassen
+                    viz.create_reference_plot(metric_key, hist_data, p_sex, plot_path)
+                    
+                    if os.path.exists(plot_path):
+                        plot_files.append(plot_path)
+                        debug_log(str_id, f"   ✅ Plot erstellt: {metric_key} ({len(hist_data)} Messpunkte)")
+                    else:
+                        debug_log(str_id, f"   ❌ Datei nicht gefunden nach Erstellung: {plot_path}")
                 
-                if os.path.exists(plot_path):
-                    plot_files.append(plot_path)
-                    if is_debug: print(f"   ✅ Plot erstellt: Sprunghöhe ({len(hist_sprung)} Messpunkte)")
-            except Exception as e:
-                if is_debug: print(f"   ❌ Fehler bei Sprung-Plot: {e}")
-        else:
-            if is_debug: print(f"   ℹ️  Kein Sprung-Plot (Keine validen Messdaten mit Alter gefunden)")
+                except Exception as e:
+                    debug_log(str_id, f"   ❌ CRASH bei {metric_key}-Plot: {e}")
+                    # Zeigt den genauen Fehlercode (hilft extrem bei der Fehlersuche)
+                    if str_id in DEBUG_IDS: 
+                        traceback.print_exc()
+            else:
+                grund = "Alter fehlt" if p_age is None else "Keine validen Historien-Daten (z.B. NaN)"
+                debug_log(str_id, f"   ℹ️  Überspringe {metric_key}-Plot ({grund})")
 
-        # B) VO2max
-        hist_vo2 = metrics_data.get("vo2max", {}).get("history", [])
-        
-        if hist_vo2:
-            plot_path_vo2 = f"{plots_dir}/vo2_ref.png"
-            try:
-                viz.create_reference_plot("vo2max", hist_vo2, p_sex, plot_path_vo2)
-                
-                if os.path.exists(plot_path_vo2):
-                    plot_files.append(plot_path_vo2)
-                    if is_debug: print(f"   ✅ Plot erstellt: VO2max ({len(hist_vo2)} Messpunkte)")
-            except Exception as e:
-                if is_debug: print(f"   ❌ Fehler bei VO2-Plot: {e}")
-        else:
-             if is_debug: print(f"   ℹ️  Kein VO2-Plot (Keine Daten)")
-
-        # --- REPORT ---
+        # --- REPORT GENERIEREN ---
         report_file = f"{patient_dir}/report.pdf"
         try:
             report = ReportGenerator(report_file)
             report.build_report(metrics_data, plot_files)
             count += 1
-            if is_debug: print(f"   📄 PDF erfolgreich generiert: {report_file}")
+            debug_log(str_id, f"   📄 PDF generiert: {report_file}")
         except Exception as e:
             print(f"❌ Fehler beim PDF-Bau für {str_id}: {e}")
 
-        if is_debug: print("-" * 30 + "\n")
+        debug_log(str_id, "-" * 30 + "\n")
 
     print(f"✅ Fertig! {count} Reports wurden erstellt.")
 

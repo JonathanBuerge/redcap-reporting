@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
-from reference_data import JUMP_HEIGHT_LMS, get_vo2max_reference
+from reference_data import JUMP_HEIGHT_LMS, get_vo2max_reference, PMAX_MASS_LMS, MTP_REL_DATA, LEG_EXT_REL_DATA
 
 class Visualizer:
     def __init__(self):
@@ -16,7 +16,11 @@ class Visualizer:
         }
 
     def _calc_lms(self, l, m, s, z):
-        return m * ((1 + l * s * z) ** (1/l))
+        """LMS Formel: L=0 -> Log-Normal (Exp), sonst Standard-Box-Cox"""
+        if l == 0:
+            return m * np.exp(s * z)
+        else:
+            return m * ((1 + l * s * z) ** (1/l))
 
     def create_reference_plot(self, metric_type, history_data, sex, output_path):
         """
@@ -39,14 +43,55 @@ class Visualizer:
                         percentiles_data[p].append(self._calc_lms(l, m, s, z))
                 else:
                     for p in percentiles_data: percentiles_data[p].append(np.nan)
-                    
+
+        #BLOCK FÜR RELATIVE POWER ---
+        elif metric_type == 'pmax_rel':
+            title = f"Sprungkraft pro kg ({'Mädchen' if sex == 'girls' else 'Jungs'})"
+            ylabel = "Leistung (W/kg)"
+            ref_dict = PMAX_MASS_LMS.get(sex, {})
+            for age in ages:
+                if age in ref_dict:
+                    l, m, s = ref_dict[age]
+                    for p, z in self.z_scores_lms.items():
+                        percentiles_data[p].append(self._calc_lms(l, m, s, z))
+                else:
+                    for p in percentiles_data: percentiles_data[p].append(np.nan)
+
+        # --- NEU: IMTP Relative Kraft ---
+        elif metric_type == 'mtp_rel':
+            title = f"Ganzkörperkraft pro kg ({'Mädchen' if sex == 'girls' else 'Jungs'})"
+            ylabel = "Kraft / Gewicht (kg/kg)"
+            ref_dict = MTP_REL_DATA.get(sex, {})
+            # Wir haben hier direkt die 7 Perzentile
+            for age in ages:
+                if age in ref_dict:
+                    vals = ref_dict[age] # (P3, P10, P25, P50, P75, P90, P97)
+                    for i, p in enumerate(['P3', 'P10', 'P25', 'P50', 'P75', 'P90', 'P97']):
+                        percentiles_data[p].append(vals[i])
+                else:
+                    for p in percentiles_data: percentiles_data[p].append(np.nan)
+
+        # --- NEU: Leg Extension Relative Kraft ---
+        elif metric_type == 'leg_ext_rel':
+            title = f"Beinkraft pro kg ({'Mädchen' if sex == 'girls' else 'Jungs'})"
+            ylabel = "Kraft / Gewicht (kg/kg)"
+            ref_dict = LEG_EXT_REL_DATA.get(sex, {})
+            for age in ages:
+                if age in ref_dict:
+                    vals = ref_dict[age]
+                    for i, p in enumerate(['P3', 'P10', 'P25', 'P50', 'P75', 'P90', 'P97']):
+                        percentiles_data[p].append(vals[i])
+                else:
+                    for p in percentiles_data: percentiles_data[p].append(np.nan)
+        
         elif metric_type == 'vo2max':
-            title = f"VO2peak ({'Mädchen' if sex == 'girls' else 'Jungs'})"
-            ylabel = "VO2peak (mL/kg/min)"
+            title = f"Ausdauer (VO2max) ({'Mädchen' if sex == 'girls' else 'Jungs'})"
+            ylabel = "Sauerstoff (mL/kg/min)"
             for age in ages:
                 refs = get_vo2max_reference(age, sex)
                 for p in refs: percentiles_data[p].append(refs[p])
 
+    
         # Referenz zeichnen
         for p_name in ['P3', 'P10', 'P25', 'P75', 'P90', 'P97', 'P50']:
             y_vals = percentiles_data[p_name]
