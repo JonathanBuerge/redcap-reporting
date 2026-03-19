@@ -2,9 +2,9 @@ from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import cm
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, KeepTogether
 from reportlab.graphics.shapes import Drawing, Rect, String
-from reportlab.lib.enums import TA_RIGHT, TA_LEFT
+from reportlab.lib.enums import TA_RIGHT, TA_LEFT, TA_CENTER
 import os
 
 class ReportGenerator:
@@ -13,14 +13,36 @@ class ReportGenerator:
         self.styles = getSampleStyleSheet()
         self._create_custom_styles()
 
+        # --- NEUE STRUKTUR-DEFINITION ---
+        # Format: (Kategorie-Titel, [(Anzeige-Name, Metric-Key, Einheit, Plot-Dateiname)])
+        self.report_structure = [
+            ("Anthropometrie", [
+                ("Körpergrösse", "groesse", "cm", "groesse_ref.png"),
+                ("Körpergewicht", "gewicht", "kg", "gewicht_ref.png")
+            ]),
+            ("Kraftmessungen", [
+                ("Max. Handkraft", "handkraft", "kg", "handkraft_ref.png"),
+                ("Sprunghöhe", "sprung", "cm", "sprung_ref.png"),
+                ("Sprungkraft (Relativ)", "pmax_rel", "W/kg", "pmax_rel_ref.png"),
+                ("Isom. Kreuzheben (Absolut)", "kreuzheben", "kg", None),
+                ("Ganzkörperkraft (Relativ)", "mtp_rel", "kg/kg", "mtp_rel_ref.png"),
+                ("Max. Beinstreckkraft (Absolut)", "beinstrecker", "Nm", None),
+                ("Beinkraft (Relativ)", "leg_ext_rel", "Nm/kg", "leg_ext_rel_ref.png")
+            ]),
+            ("Spiroergometrie", [
+                ("Ausdauer (VO2max)", "vo2max", "mL/kg/min", "vo2_ref.png"),
+                ("Max. Leistung", "leistung", "Watt", "leistung_abs_ref.png")
+            ])
+        ]
+
     def _create_custom_styles(self):
-        """Definiert Styles."""
-        self.styles.add(ParagraphStyle(name='ReportTitle', parent=self.styles['Heading1'], fontSize=16, leading=20, textColor=colors.darkblue, alignment=TA_LEFT, spaceAfter=10))
-        self.styles.add(ParagraphStyle(name='SectionHeader', parent=self.styles['Heading2'], fontSize=12, leading=14, textColor=colors.white, backColor=colors.darkblue, borderPadding=(5, 2, 5, 2), alignment=TA_LEFT, spaceBefore=10, spaceAfter=5))
-        self.styles.add(ParagraphStyle(name='MetricLabel', parent=self.styles['Normal'], fontSize=10, leading=12, fontName='Helvetica-Bold'))
-        self.styles.add(ParagraphStyle(name='MetricValue', parent=self.styles['Normal'], fontSize=10, leading=12, alignment=TA_RIGHT))
-        self.styles.add(ParagraphStyle(name='MetricChange', parent=self.styles['Normal'], fontSize=9, leading=12, textColor=colors.green, alignment=TA_RIGHT))
-        self.styles.add(ParagraphStyle(name='ExplanationSmall', parent=self.styles['Normal'], fontSize=8, leading=10, textColor=colors.darkgrey))
+        """Definiert Styles für das neue, einspaltige Layout."""
+        self.styles.add(ParagraphStyle(name='ReportTitle', parent=self.styles['Heading1'], fontSize=18, leading=22, textColor=colors.darkblue, alignment=TA_CENTER, spaceAfter=15))
+        self.styles.add(ParagraphStyle(name='SectionHeader', parent=self.styles['Heading2'], fontSize=14, leading=16, textColor=colors.white, backColor=colors.darkblue, borderPadding=(6, 4, 6, 4), alignment=TA_LEFT, spaceBefore=15, spaceAfter=10))
+        self.styles.add(ParagraphStyle(name='MetricLabel', parent=self.styles['Normal'], fontSize=11, leading=14, fontName='Helvetica-Bold'))
+        self.styles.add(ParagraphStyle(name='MetricValue', parent=self.styles['Normal'], fontSize=10, leading=12))
+        self.styles.add(ParagraphStyle(name='MetricChange', parent=self.styles['Normal'], fontSize=10, leading=12, fontName='Helvetica-Bold'))
+        self.styles.add(ParagraphStyle(name='ExplanationSmall', parent=self.styles['Normal'], fontSize=8, leading=11, textColor=colors.darkgrey))
 
     def _create_header(self, patient_info):
         """Erstellt den Header mit Daten aus dem 'meta' Dictionary."""
@@ -31,18 +53,19 @@ class ReportGenerator:
         p_dob = patient_info.get('Geburtsdatum', '-')
 
         p_data = [[f"ID: {p_id}", f"Name: {p_name}", f"Geburtsdatum: {p_dob}"]]
-        p_table = Table(p_data, colWidths=[4*cm, 7*cm, 5*cm])
+        p_table = Table(p_data, colWidths=[5*cm, 8*cm, 5*cm])
         p_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, -1), colors.lightgrey),
             ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
             ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-            ('TOPPADDING', (0, 0), (-1, -1), 6)
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ('TOPPADDING', (0, 0), (-1, -1), 8)
         ]))
         return [title, Spacer(1, 0.5*cm), p_table, Spacer(1, 1*cm)]
 
-    def _create_metric_row(self, label, metric_data, unit=""):
-        """Erstellt Zeile basierend auf Dictionary Daten {'pre': 10, 'post': 12, 'diff': 20}"""
+    def _create_metric_table(self, label, metric_data, unit=""):
+        """Erstellt eine breite, saubere Tabelle für die numerischen Werte einer Metrik."""
         if not metric_data:
             metric_data = {'pre': '-', 'post': '-', 'diff': None}
 
@@ -63,19 +86,24 @@ class ReportGenerator:
 
         style_change = ParagraphStyle('Change', parent=self.styles['MetricChange'], textColor=color)
 
-        row = [
+        # Tabellendaten: [ Name | Startwert | Aktueller Wert | Differenz ]
+        data = [[
             Paragraph(label, self.styles['MetricLabel']),
-            Paragraph(f"{old_val} {unit}", self.styles['MetricValue']),
-            Paragraph(f"<b>{new_val} {unit}</b>", self.styles['MetricValue']),
-            Paragraph(change_str, style_change)
-        ]
-        return row
-
-    def _create_placeholder_img(self, text, w, h):
-        d = Drawing(w, h)
-        d.add(Rect(0, 0, w, h, fillColor=colors.lightgrey, strokeColor=colors.black))
-        d.add(String(w/2, h/2, text, textAnchor='middle', fillColor=colors.black))
-        return d
+            Paragraph(f"Start: {old_val} {unit}", self.styles['MetricValue']),
+            Paragraph(f"Aktuell: <b>{new_val} {unit}</b>", self.styles['MetricValue']),
+            Paragraph(f"Diff: {change_str}", style_change)
+        ]]
+        
+        # Volle Seitenbreite (ca. 18cm nutzbar)
+        t = Table(data, colWidths=[6.5*cm, 4*cm, 4*cm, 3.5*cm])
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,-1), colors.whitesmoke),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+            ('TOPPADDING', (0,0), (-1,-1), 6),
+            ('LINEBELOW', (0,0), (-1,-1), 0.5, colors.lightgrey)
+        ]))
+        return t
 
     def build_report(self, metrics, plot_files):
         doc = SimpleDocTemplate(self.out_file, pagesize=A4, rightMargin=1.5*cm, leftMargin=1.5*cm, topMargin=1.5*cm, bottomMargin=1.5*cm)
@@ -85,105 +113,54 @@ class ReportGenerator:
         patient_meta = metrics.get("meta", {})
         story.extend(self._create_header(patient_meta))
 
-        # --- BLÖCKE FÜR DIE LINKE SPALTE VORBEREITEN ---
-        left_blocks = []
-        
-        # Block 1: KRAFT
-        block_kraft = []
-        block_kraft.append(Paragraph("Kraftmessungen", self.styles['SectionHeader']))
-        kraft_data = []
-        kraft_data.append([Paragraph("", self.styles['Normal']), Paragraph("Start", self.styles['ExplanationSmall']), Paragraph("Aktuell", self.styles['ExplanationSmall']), Paragraph("Diff", self.styles['ExplanationSmall'])])
-        kraft_data.append(self._create_metric_row("Max. Handkraft", metrics.get("handkraft"), "kg"))
-        kraft_data.append(self._create_metric_row("Sprunghöhe", metrics.get("sprung"), "cm"))
-        kraft_data.append(self._create_metric_row("Isom. Kreuzheben", metrics.get("kreuzheben"), "kg"))
-        kraft_data.append(self._create_metric_row("Max. Beinstreckkraft", metrics.get("beinstrecker"), "Nm"))
-        t_kraft = Table(kraft_data, colWidths=[4.2*cm, 1.8*cm, 1.8*cm, 1.5*cm])
-        t_kraft.setStyle(TableStyle([('LINEBELOW', (0,0), (-1,0), 0.5, colors.grey), ('VALIGN', (0,0), (-1,-1), 'MIDDLE'), ('LEFTPADDING', (0,0), (-1,-1), 0)]))
-        block_kraft.append(t_kraft)
-        left_blocks.append(block_kraft)
+        # Dateinamen der übergebenen Plots in ein Dictionary mappen für schnellen Zugriff
+        plot_dict = {os.path.basename(p): p for p in plot_files}
 
-        # Block 2: SPIRO
-        block_spiro = []
-        block_spiro.append(Paragraph("Spiroergometrie", self.styles['SectionHeader']))
-        spiro_data = []
-        spiro_data.append(self._create_metric_row("VO2max", metrics.get("vo2max"), "ml/kg/min"))
-        spiro_data.append(self._create_metric_row("Max. Leistung", metrics.get("leistung"), "Watt"))
-        t_spiro = Table(spiro_data, colWidths=[4.2*cm, 1.8*cm, 1.8*cm, 1.5*cm])
-        t_spiro.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'MIDDLE'), ('LEFTPADDING', (0,0), (-1,-1), 0)]))
-        block_spiro.append(t_spiro)
-        left_blocks.append(block_spiro)
-
-        # Block 3: ANTHRO
-        block_anthro = []
-        block_anthro.append(Paragraph("Anthropometrie", self.styles['SectionHeader']))
-        anthro_data = []
-        anthro_data.append(self._create_metric_row("Körpergrösse", metrics.get("groesse"), "cm"))
-        anthro_data.append(self._create_metric_row("Gewicht", metrics.get("gewicht"), "kg"))
-        t_anthro = Table(anthro_data, colWidths=[4.2*cm, 1.8*cm, 1.8*cm, 1.5*cm])
-        t_anthro.setStyle(TableStyle([('VALIGN', (0,0), (-1,-1), 'MIDDLE'), ('LEFTPADDING', (0,0), (-1,-1), 0)]))
-        block_anthro.append(t_anthro)
-        left_blocks.append(block_anthro)
-
-        # --- BLÖCKE FÜR DIE RECHTE SPALTE VORBEREITEN (Plots) ---
-        right_blocks = []
-        
-        if not plot_files:
-            # Wenn keine Plots da sind, machen wir einen Dummy-Block
-            content = [
-                Paragraph("<b>Referenzwerte:</b>", self.styles['MetricLabel']),
-                Paragraph("Perzentilkurven bieten eine visuelle Darstellung...", self.styles['ExplanationSmall']),
-                Spacer(1, 0.2*cm),
-                self._create_placeholder_img("Keine Plots vorhanden", 8*cm, 5*cm)
-            ]
-            right_blocks.append(content)
-        else:
-            for i, plot_path in enumerate(plot_files):
-                content = []
-                # Nur beim ersten Plot kommt die Überschrift dazu
-                if i == 0:
-                    content.append(Paragraph("<b>Referenzwerte:</b>", self.styles['MetricLabel']))
-                    content.append(Paragraph("Perzentilkurven bieten eine visuelle Darstellung...", self.styles['ExplanationSmall']))
-                    content.append(Spacer(1, 0.2*cm))
+        # --- NEUER LAYOUT-AUFBAU (Einspaltig) ---
+        for section_title, metric_list in self.report_structure:
+            # Sektions-Überschrift (z.B. "Kraftmessungen")
+            story.append(Paragraph(section_title, self.styles['SectionHeader']))
+            
+            for display_name, metric_key, unit, expected_plot_name in metric_list:
+                metric_data = metrics.get(metric_key)
                 
-                # Plot oder Platzhalter laden
-                if os.path.exists(plot_path):
-                    content.append(Image(plot_path, width=8*cm, height=5*cm))
-                else:
-                    content.append(self._create_placeholder_img("Plot fehlt", 8*cm, 5*cm))
+                # Wir fassen Titel, Werte und Plot in einem "KeepTogether"-Block zusammen.
+                # So wird verhindert, dass eine Überschrift auf Seite 1 steht und das Bild auf Seite 2 rutscht.
+                block = []
                 
-                right_blocks.append(content)
+                # 1. Numerische Werte (Tabelle)
+                block.append(self._create_metric_table(display_name, metric_data, unit))
+                block.append(Spacer(1, 0.3*cm))
+                
+                # 2. Diagramm (falls definiert und vorhanden)
+                if expected_plot_name:
+                    plot_path = plot_dict.get(expected_plot_name)
+                    if plot_path and os.path.exists(plot_path):
+                        # Bild ist jetzt deutlich größer! (12 x 7.5 cm statt 8 x 5 cm)
+                        img = Image(plot_path, width=12*cm, height=7.5*cm)
+                        block.append(img)
+                    else:
+                        # Optional: Falls kein Bild da ist, nichts anzeigen oder einen kleinen Text
+                        block.append(Paragraph("<i>Kein Referenzdiagramm verfügbar.</i>", self.styles['ExplanationSmall']))
+                
+                block.append(Spacer(1, 0.8*cm)) # Abstand zum nächsten Parameter
+                
+                # Block zum Dokument hinzufügen (zusammenhalten)
+                story.append(KeepTogether(block))
 
-        # --- LAYOUT ZUSAMMENBAUEN (In mehrere Zeilen aufteilen) ---
-        main_table_data = []
-        max_rows = max(len(left_blocks), len(right_blocks))
-        
-        for i in range(max_rows):
-            # Holt den Block oder eine leere Liste, falls keine mehr da sind
-            l_cell = left_blocks[i] if i < len(left_blocks) else []
-            r_cell = right_blocks[i] if i < len(right_blocks) else []
-            main_table_data.append([l_cell, r_cell])
-
-        # Die Tabelle kann jetzt zwischen den Zeilen auf eine neue Seite umbrechen!
-        main_table = Table(main_table_data, colWidths=[10*cm, 8.5*cm])
-        main_table.setStyle(TableStyle([
-            ('VALIGN', (0,0), (-1,-1), 'TOP'), 
-            ('LEFTPADDING', (0,0), (-1,-1), 0),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 10) # Etwas Luft zwischen den Zeilen/Plots
-        ]))
-        story.append(main_table)
-        
         # --- FOOTER ---
         story.append(Spacer(1, 0.5*cm))
-        story.append(Paragraph("<b>Erklärung der Messwerte:</b>", self.styles['MetricLabel']))
+        story.append(Paragraph("<b>Erklärung der Messwerte & Hinweise:</b>", self.styles['MetricLabel']))
         story.append(Spacer(1, 0.2*cm))
         
         explanations = [
-            "<b>Max. Handkraft:</b> Maß für die allgemeine Kraft des Oberkörpers und die Griffkraft.",
+            "<b>Körpergröße & Gewicht:</b> Als Referenz dienen die mitteleuropäischen Wachstumsnormen (Kromeyer-Hauschild).",
+            "<b>Max. Handkraft:</b> Maß für die allgemeine Kraft des Oberkörpers. Die Referenzkurve gilt für die starke (dominante) Hand.",
             "<b>Sprunghöhe & Sprungkraft:</b> Zeigt die Explosivität und Schnellkraft der Beinmuskulatur.",
-            "<b>Isom. Kreuzheben (Ganzkörperkraft):</b> Misst die statische Maximalkraft des gesamten Körpers (Rücken, Beine, Rumpf).",
-            "<b>Max. Beinstreckkraft:</b> Zeigt die isolierte Kraft der vorderen Oberschenkelmuskulatur.",
-            "<b>Ausdauer (VO2max):</b> Die maximale Sauerstoffaufnahme ist der beste Wert für die Herz-Kreislauf-Fitness.",
-            "<b>Relative Werte (pro kg):</b> Um faire Vergleiche zu ermöglichen, wird die Kraft oft durch das eigene Körpergewicht geteilt (z.B. bedeutet 2,0 das Zweifache des eigenen Gewichts)."
+            "<b>Isom. Kreuzheben (Ganzkörperkraft):</b> Misst die statische Maximalkraft des gesamten Körpers. <b>Wichtig:</b> Die Referenzkurven für diese Metrik stammen aus einer Population von jungen Leistungssportlern (NSCA). Ein Wert unter dem Median ist für Nicht-Athleten völlig normal.",
+            "<b>Max. Beinstreckkraft:</b> Zeigt die isolierte Kraft der vorderen Oberschenkelmuskulatur. Hinweis: Die Referenz basiert auf Werten handgehaltener Dynamometrie (HHD).",
+            "<b>Ausdauer (VO2max) & Leistung:</b> Die Sauerstoffaufnahme ist der beste Wert für die Herz-Kreislauf-Fitness. Referenzwerte basieren auf SentrySuite/Takken.",
+            "<b>Relative Werte (pro kg):</b> Um faire Vergleiche zu ermöglichen, wird Kraft/Leistung oft durch das eigene Körpergewicht geteilt."
         ]
         
         for text in explanations:
