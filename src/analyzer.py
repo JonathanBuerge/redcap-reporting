@@ -43,7 +43,7 @@ class Analyzer:
 
         is_debug = str(patient_id) in ["decad_105", "105"]
 
-        # --- 1. Zeitachse & Alter berechnen (mit Fallback) ---
+        # --- 1. Zeitachse & Alter berechnen (Wieder mit Timestamps & Fallback) --- Alterative wäre crf_date oder so
         p_df['age_calculated'] = np.nan
         
         if 'crf_geb' in p_df.columns:
