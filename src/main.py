@@ -46,10 +46,14 @@ def main():
     all_ids = analyzer.get_all_patient_ids()
     print(f"👥 {len(all_ids)} Patienten in CSV gefunden.\n")
 
+    # === SCHRANKE FÜR TESTLÄUFE (ENERGIE SPAREN) ===
+    # WICHTIG: Entferne das "[:15]", wenn du später wieder alle Patienten generieren willst!
+    patient_ids_to_process = all_ids[:15]
+
     count = 0
     viz = Visualizer()
 
-    for p_id in all_ids:
+    for p_id in patient_ids_to_process:
         str_id = str(p_id)
         debug_log(str_id, f"--- BEARBEITE PATIENT {str_id} ---")
 
