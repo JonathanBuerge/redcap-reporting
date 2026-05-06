@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 from reference_data import (
-    JUMP_HEIGHT_LMS, PMAX_MASS_LMS, get_vo2max_reference, PMAX_ABS_DATA,
+    JUMP_HEIGHT_PERCENTILES, PMAX_MASS_LMS, get_vo2max_reference, PMAX_ABS_DATA,
     MTP_REL_DATA, LEG_EXT_REL_DATA, HANDGRIP_DOM_DATA, HEIGHT_DATA, WEIGHT_DATA
 )
 
@@ -34,12 +34,17 @@ class Visualizer:
         if metric_type == 'sprung':
             title = f"Sprunghöhe ({'Mädchen' if sex == 'girls' else 'Jungs'})"
             ylabel = "Sprunghöhe (cm)"
-            ref_dict = JUMP_HEIGHT_LMS.get(sex, {})
+            ref_dict = JUMP_HEIGHT_PERCENTILES.get(sex, {})
+            # Neue Percentile-Logik (User hat 5 Werte geliefert: P10, P25, P50, P75, P90)
+            p_map = ['P10', 'P25', 'P50', 'P75', 'P90']
             for age in ages:
                 if age in ref_dict:
-                    l, m, s = ref_dict[age]
-                    for p, z in self.z_scores_lms.items():
-                        percentiles_data[p].append(self._calc_lms(l, m, s, z))
+                    vals = ref_dict[age]
+                    for i, p in enumerate(p_map):
+                        percentiles_data[p].append(vals[i])
+                    # Restliche auf NaN
+                    for p in set(self.colors.keys()) - set(p_map):
+                        percentiles_data[p].append(np.nan)
                 else:
                     for p in percentiles_data: percentiles_data[p].append(np.nan)
 
