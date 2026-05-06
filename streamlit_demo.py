@@ -9,7 +9,8 @@ import os
 sys.path.append(os.path.join(os.getcwd(), 'src'))
 
 from analyzer import Analyzer
-from reference_data import HEIGHT_DATA, HANDGRIP_DOM_DATA
+from reference_data import HEIGHT_DATA, HANDGRIP_DOM_DATA, JUMP_HEIGHT_PERCENTILES
+from utils import load_merged_data
 
 # Page Config
 st.set_page_config(page_title="DECADE Dashboard", layout="wide")
@@ -35,10 +36,10 @@ st.markdown("---")
 @st.cache_data
 def load_data():
     csv_path = "data/anonym.csv"
-    if not os.path.exists(csv_path):
+    api_path = "data/api_data.csv"
+    df = load_merged_data(csv_path, api_path)
+    if df is None:
         st.error(f"Datei nicht gefunden: {csv_path}")
-        return None
-    df = pd.read_csv(csv_path)
     return df
 
 df = load_data()
@@ -78,25 +79,30 @@ if df is not None:
                 # Percentiles names and their colors (matched to existing visualizer)
                 p_names = ['P3', 'P10', 'P25', 'P50', 'P75', 'P90', 'P97']
                 p_colors = {
-                    'P97': 'rgba(204, 204, 204, 0.4)', 
-                    'P90': 'rgba(204, 204, 204, 0.6)', 
-                    'P75': 'rgba(136, 136, 136, 0.4)',
-                    'P50': 'rgba(0, 0, 0, 0.8)',
-                    'P25': 'rgba(136, 136, 136, 0.4)', 
-                    'P10': 'rgba(204, 204, 204, 0.6)', 
-                    'P3': 'rgba(204, 204, 204, 0.4)'
+                    'P97': '#cccccc', 
+                    'P90': '#cccccc', 
+                    'P75': '#888888',
+                    'P50': '#000000',
+                    'P25': '#888888', 
+                    'P10': '#cccccc', 
+                    'P3': '#cccccc'
                 }
                 
                 # Fetch Reference Data
+                p_map = ['P3', 'P10', 'P25', 'P50', 'P75', 'P90', 'P97']
+                
                 if metric_type == 'groesse':
                     ref_dict = HEIGHT_DATA.get(sex, {})
                 elif metric_type == 'handkraft':
                     ref_dict = HANDGRIP_DOM_DATA.get(sex, {})
+                elif metric_type == 'sprung':
+                    ref_dict = JUMP_HEIGHT_PERCENTILES.get(sex, {})
+                    p_map = ['P10', 'P25', 'P50', 'P75', 'P90']
                 else:
                     return None
 
                 # Build Percentile Traces
-                for i, p_name in enumerate(p_names):
+                for i, p_name in enumerate(p_map):
                     y_vals = []
                     for a in ages:
                         if a in ref_dict:
@@ -104,7 +110,7 @@ if df is not None:
                         else:
                             y_vals.append(None)
                     
-                    line_style = dict(color=p_colors[p_name], width=1 if p_name != 'P50' else 3)
+                    line_style = dict(color=p_colors.get(p_name, '#ccc'), width=1 if p_name != 'P50' else 3)
                     if p_name != 'P50':
                         line_style['dash'] = 'dash'
                     
@@ -112,7 +118,7 @@ if df is not None:
                         x=ages, y=y_vals,
                         name=p_name,
                         line=line_style,
-                        hoverinfo='skip', # Hide percentile hover to keep it clean
+                        hoverinfo='skip', 
                         showlegend=True if p_name == 'P50' else False
                     ))
 
@@ -187,6 +193,23 @@ if df is not None:
                         st.plotly_chart(fig_hand, use_container_width=True)
                 else:
                     st.info("Keine Daten für Handkraft vorhanden.")
+
+            st.markdown("---")
+            st.markdown("### Schnellkraft (Sprunghöhe)")
+            
+            history_jump = p_data.get('sprung', {}).get('history', [])
+            if history_jump:
+                fig_jump = create_plotly_chart(
+                    'sprung', 
+                    history_jump, 
+                    sex, 
+                    "Sprunghöhe Entwicklung", 
+                    "Höhe (cm)"
+                )
+                if fig_jump:
+                    st.plotly_chart(fig_jump, use_container_width=True)
+            else:
+                st.info("Keine Daten für Sprunghöhe vorhanden.")
 
             st.markdown("---")
             st.info("Hinweis: Dies ist eine anonymisierte Demo-Ansicht. Personenbezogene Daten werden nicht gespeichert.")
