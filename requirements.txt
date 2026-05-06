@@ -3,3 +3,5 @@ matplotlib
 reportlab
 streamlit
 plotly
+requests
+python-dotenv

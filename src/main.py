@@ -1,7 +1,7 @@
 from analyzer import Analyzer
 from report_generator import ReportGenerator
 from visualizer import Visualizer
-from utils import ensure_patient_dirs
+from utils import ensure_patient_dirs, load_merged_data
 import pandas as pd
 import os
 import warnings
@@ -10,6 +10,7 @@ import traceback
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 DATA_FILE = "./data/anonym.csv"
+API_FILE = "./data/api_data.csv"
 REPORTS_BASE = "./reports"
 DEBUG_IDS = ["decad_105", "105"]
 
@@ -36,11 +37,11 @@ def main():
     print(f"🚀 Starte DECADE Reporting (Alle Patienten)...")
     print(f"ℹ️  Detail-Logs nur für: {DEBUG_IDS}\n")
 
-    try:
-        df = pd.read_csv(DATA_FILE, sep=None, engine='python')
-    except Exception as e:
-        print(f"❌ Kritischer Fehler beim Laden der CSV: {e}")
+    df = load_merged_data(DATA_FILE, API_FILE)
+    if df is None:
+        print(f"❌ Kritischer Fehler beim Laden der CSV.")
         return
+
 
     analyzer = Analyzer(df)
     all_ids = analyzer.get_all_patient_ids()
