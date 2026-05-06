@@ -85,11 +85,19 @@ class Analyzer:
                 elif val_int == 2: sex_str = 'boys'
             except: pass
 
+        last_date = ""
+        if 'crf_date' in p_df.columns:
+            last_date_raw = p_df['crf_date'].dropna().iloc[-1] if not p_df['crf_date'].dropna().empty else ""
+            if pd.notna(last_date_raw):
+                try:
+                    last_date = pd.to_datetime(last_date_raw).strftime('%d.%m.%Y')
+                except: last_date = str(last_date_raw)
+
         results = {
             "meta": {
                 "ID": patient_id,
                 "Name": "", 
-                "Geburtsdatum": p_df['crf_geb'].iloc[0] if 'crf_geb' in p_df.columns else "",
+                "Messdatum": last_date,
                 "age": current_age,
                 "sex": sex_str
             }
@@ -127,7 +135,44 @@ class Analyzer:
             p_df['mtp_rel_calculated'] = np.nan
             p_df['leg_ext_rel_calculated'] = np.nan
 
-        # --- 5. Metriken extrahieren (Alle: Absolut & Relativ) ---
+        # --- 5. Maturity Offset nach Mirwald (NEU mit Verlauf) ---
+        maturity_history = []
+        if 'crf_sitting_height' in p_df.columns and 'crf_height' in p_df.columns and 'crf_weight' in p_df.columns:
+            mat_temp_df = p_df.copy()
+            mat_temp_df['h_num'] = self._safe_numeric(mat_temp_df['crf_height'])
+            mat_temp_df['w_num'] = self._safe_numeric(mat_temp_df['crf_weight'])
+            mat_temp_df['sh_num'] = self._safe_numeric(mat_temp_df['crf_sitting_height'])
+            
+            # Drop rows with missing data for maturity
+            mat_valid = mat_temp_df.dropna(subset=['h_num', 'w_num', 'sh_num', 'age_calculated'])
+            
+            for _, row in mat_valid.iterrows():
+                h, w, sh, age = row['h_num'], row['w_num'], row['sh_num'], row['age_calculated']
+                if h > 0:
+                    leg = h - sh
+                    if sex_str == 'boys':
+                        off = -9.236 + (0.0002708 * leg * sh) - (0.001663 * age * leg) + (0.007216 * age * sh) + (0.02292 * (w / h) * 100)
+                    else:
+                        off = -9.376 + (0.0001882 * leg * sh) + (0.0022 * age * leg) + (0.005841 * age * sh) - (0.002658 * age * w) + (0.07693 * (w / h) * 100)
+                    maturity_history.append({
+                        "chron_age": age,
+                        "offset": off,
+                        "bio_age": age + off,
+                        "date": str(row['crf_date']) if pd.notna(row.get('crf_date')) else results['meta'].get('Messdatum', '-')
+                    })
+        
+        results["meta"]["maturity_history"] = maturity_history
+        if maturity_history:
+            latest = maturity_history[-1]
+            results["meta"]["maturity_offset"] = latest["offset"]
+            results["meta"]["biological_age"] = latest["bio_age"]
+            results["meta"]["latest_mat_data"] = latest
+        else:
+            results["meta"]["maturity_offset"] = None
+            results["meta"]["biological_age"] = None
+            results["meta"]["latest_mat_data"] = None
+
+        # --- 6. Metriken extrahieren (Alle: Absolut & Relativ) ---
         full_map = self.metric_map.copy()
         
         # Wir fügen die neu berechneten Spalten hinzu

@@ -22,10 +22,10 @@ PLOTS_CONFIG = [
     # Kraft
     ("handkraft", "handkraft_ref.png"),
     ("sprung", "sprung_ref.png"),
-    ("pmax_rel", "pmax_rel_ref.png"), 
-    ("mtp_rel", "mtp_rel_ref.png"),         
-    ("leg_ext_rel", "leg_ext_rel_ref.png"),
-    # Spiroergometrie
+    ("pmax_rel", "pmax_rel_ref.png"),
+    ("kreuzheben", "kreuzheben_ref.png"),
+    ("mtp_rel", "mtp_rel_ref.png"),
+    ("beinstrecker", "beinstrecker_ref.png"),
     ("vo2max", "vo2_ref.png"),
     ("leistung", "leistung_abs_ref.png")  
 ]
@@ -49,7 +49,10 @@ def main():
 
     # === SCHRANKE FÜR TESTLÄUFE (ENERGIE SPAREN) ===
     # WICHTIG: Entferne das "[:15]", wenn du später wieder alle Patienten generieren willst!
-    patient_ids_to_process = all_ids[:15]
+    #patient_ids_to_process = all_ids#[:15]
+    target_ids = ["decad_141", "141", "decad_142", "142", "decad_143", "143", "decad_102", "102", "decad_105", "105"]
+    patient_ids_to_process = [pid for pid in all_ids if str(pid) in target_ids] 
+
 
     count = 0
     viz = Visualizer()
@@ -91,6 +94,17 @@ def main():
             else:
                 grund = "Alter fehlt" if p_age is None else "Keine validen Historien-Daten (z.B. NaN)"
                 debug_log(str_id, f"   ℹ️  Überspringe {metric_key}-Plot ({grund})")
+
+        # --- NEU: Maturity Plot (Einmalig pro Patient) ---
+        maturity_hist = metrics_data.get("meta", {}).get("maturity_history", [])
+        if maturity_hist:
+            mat_plot_path = os.path.join(plots_dir, "maturity_plot.png")
+            try:
+                viz.create_maturity_plot(maturity_hist, p_sex, mat_plot_path)
+                if os.path.exists(mat_plot_path):
+                    plot_files.append(mat_plot_path)
+            except Exception as e:
+                debug_log(str_id, f"   ❌ Fehler bei Maturity-Plot: {e}")
 
         report_file = f"{patient_dir}/report.pdf"
         try:

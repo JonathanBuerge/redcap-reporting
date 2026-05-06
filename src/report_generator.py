@@ -6,6 +6,7 @@ from reportlab.lib.units import cm
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, KeepTogether, PageBreak
 from reportlab.graphics.shapes import Drawing, Rect, String
 from reportlab.lib.enums import TA_RIGHT, TA_LEFT, TA_CENTER
+from datetime import datetime, timedelta
 import os
 
 # --- UNIBAS CORPORATE DESIGN FARBEN ---
@@ -36,7 +37,7 @@ class ReportGenerator:
             ("Kraftmessungen", [
                 ("Max. Handkraft", "handkraft", "kg", "handkraft_ref.png", 
                  "Maß für die allgemeine Kraft des Oberkörpers (gezeigt für die dominante Hand).", 
-                 "Ref: USA (NHANES), gesunde pädiatrische Population | DOI: 10.1080/03014460.2023.2298474", True),
+                 "Ref: Australien (1000 Norms Project), gesunde Population | DOI: 10.1212/WNL.0000000000003466", False),
                  
                 ("Sprunghöhe", "sprung", "cm", "sprung_ref.png", 
                  "Zeigt die Explosivität, Beinkraft und koordinative Schnellkraft.", 
@@ -46,19 +47,20 @@ class ReportGenerator:
                  "Zeigt die pure maximale mechanische Leistung der Beinmuskulatur pro kg Körpergewicht.", 
                  "Ref: Tschechien, gesunde Kinder und Jugendliche | DOI: 10.1016/j.bone.2013.06.012", False),
                  
-                ("Isom. Kreuzheben (Absolut)", "kreuzheben", "kg", None, 
-                 "Misst die statische Maximalkraft des gesamten Körpers.", "", True),
+                ("Isom. Kreuzheben (Absolut)", "kreuzheben", "kg", "kreuzheben_ref.png", 
+                 "Misst die statische Maximalkraft des gesamten Körpers.", 
+                 "Ref: Morris et al. (2020) Jungs & Salter et al. (2025) Mädchen", False),
                  
                 ("Ganzkörperkraft (Relativ)", "mtp_rel", "kg/kg", "mtp_rel_ref.png", 
                  "Statische Maximalkraft des Körpers im Verhältnis zum Körpergewicht.", 
-                 "Ref: UK, junge Elite-Leistungssportler (Achtung: Athleten-Norm!) | DOI: 10.1519/JSC.0000000000002673", False),
+                 "Ref: Morris et al. (2020) Jungs & Salter et al. (2025) Mädchen (Athleten-Norm!)", False),
                  
-                ("Max. Beinstreckkraft (Absolut)", "beinstrecker", "Nm", None, 
-                 "Zeigt die isolierte, absolute Kraft der vorderen Oberschenkelmuskulatur.", "", True),
+                ("Max. Beinstreckkraft (Absolut)", "beinstrecker", "Nm", "beinstrecker_ref.png", 
+                 "Zeigt die isolierte, absolute Kraft der vorderen Oberschenkelmuskulatur (Drehmoment).", 
+                 "Ref: Australien (1000 Norms Project), gesunde Population | DOI: 10.1212/WNL.0000000000003466", False),
                  
-                ("Beinkraft (Relativ)", "leg_ext_rel", "Nm/kg", "leg_ext_rel_ref.png", 
-                 "Isolierte Oberschenkelkraft im Verhältnis zum Körpergewicht.", 
-                 "DUMMY REFERENZ: HHD-Werte (Kraft) aktuell nicht kompatibel mit Isomed (Drehmoment Nm)! | DOI: 10.1212/WNL.0000000000003466", True)
+                ("Beinkraft (Relativ)", "leg_ext_rel", "Nm/kg", None, 
+                 "Isolierte Oberschenkelkraft im Verhältnis zum Körpergewicht.", "", True)
             ]),
             ("Spiroergometrie", [
                 ("Ausdauer (VO2max)", "vo2max", "mL/kg/min", "vo2_ref.png", 
@@ -100,6 +102,9 @@ class ReportGenerator:
         self.styles.add(ParagraphStyle(name='ExplanationSmall', parent=self.styles['Normal'], fontName='Helvetica-Oblique', fontSize=9, leading=12, textColor=UNIBAS_ANTHRAZIT, spaceBefore=5))
         self.styles.add(ParagraphStyle(name='ReferenceNormal', parent=self.styles['Normal'], fontName='Helvetica', fontSize=7.5, leading=10, textColor=UNIBAS_ANTHRAZIT_HELL, spaceBefore=2))
         self.styles.add(ParagraphStyle(name='ReferenceDummy', parent=self.styles['Normal'], fontName='Helvetica-Bold', fontSize=7.5, leading=10, textColor=UNIBAS_ROT, spaceBefore=2))
+        
+        # --- STYLE FÜR IMPRESSUM ---
+        self.styles.add(ParagraphStyle(name='Impressum', parent=self.styles['Normal'], fontName='Helvetica', fontSize=8, leading=11, textColor=UNIBAS_ANTHRAZIT_HELL))
 
     def _create_header(self, patient_info):
         elements = []
@@ -128,11 +133,12 @@ class ReportGenerator:
             elements.append(Spacer(1, 0.5*cm))
 
         p_id = patient_info.get('ID', '-')
-        p_name = patient_info.get('Name', '-')
-        p_dob = patient_info.get('Geburtsdatum', '-')
+        p_date = patient_info.get('Messdatum', '-')
+        p_sex_raw = patient_info.get('sex', '-')
+        p_sex = "Weiblich" if p_sex_raw == 'girls' else "Männlich" if p_sex_raw == 'boys' else "-"
 
-        p_data = [[f"Patienten-ID: {p_id}", f"Name: {p_name}", f"Geburtsdatum: {p_dob}"]]
-        p_table = Table(p_data, colWidths=[5*cm, 8*cm, 5*cm])
+        p_data = [[f"Patienten-ID: {p_id}", f"Geschlecht: {p_sex}", f"Messung vom: {p_date}"]]
+        p_table = Table(p_data, colWidths=[6*cm, 6*cm, 6*cm])
         p_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, -1), UNIBAS_MINT_HELL),
             ('TEXTCOLOR', (0, 0), (-1, -1), UNIBAS_ANTHRAZIT),
@@ -186,6 +192,128 @@ class ReportGenerator:
         ]))
         return t
 
+    def _get_german_month(self, month_num):
+        months = ["Januar", "Februar", "März", "April", "Mai", "Juni", 
+                  "Juli", "August", "September", "Oktober", "November", "Dezember"]
+        return months[month_num - 1]
+
+    def _create_maturity_block(self, meta, plot_dict):
+        elements = []
+        offset = meta.get("maturity_offset")
+        bio_age = meta.get("biological_age")
+        history = meta.get("maturity_history", [])
+        
+        if offset is None or not history:
+            return []
+            
+        latest = history[-1]
+        chron_age = latest['chron_age']
+        dev_age = bio_age - chron_age
+
+        elements.append(Paragraph("Biologischer Reifegrad (Maturity)", self.styles['SectionHeader']))
+        
+        # 1. Zusammenfassung (Farbig) - 2x2 Layout für mehr Platz
+        summary_data = [
+            [
+                Paragraph(f"Effektives Alter: <b>{chron_age:.1f} J.</b>", self.styles['MetricLabel']),
+                Paragraph(f"Biologisches Alter: <b>{bio_age:.1f} J.</b>", self.styles['MetricLabel'])
+            ],
+            [
+                Paragraph(f"Diff. Bio-Eff.: <b>{dev_age:+.1f} J.</b>", self.styles['MetricLabel']),
+                Paragraph(f"Diff. zu PHV: <b>{offset:+.1f} J.</b>", self.styles['MetricLabel'])
+            ]
+        ]
+        t_sum = Table(summary_data, colWidths=[9*cm, 9*cm])
+        t_sum.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (-1,-1), UNIBAS_MINT_HELL),
+            ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+            ('TOPPADDING', (0,0), (-1,-1), 6),
+            ('GRID', (0,0), (-1,-1), 0.5, UNIBAS_MINT_HELL),
+        ]))
+        elements.append(t_sum)
+        elements.append(Spacer(1, 0.3*cm))
+
+        # 2. Historie-Tabelle
+        header = ["MZP", "Messdatum", "Effektives Alter", "Biologisches Alter"]
+        table_rows = [header]
+        
+        for i, entry in enumerate(history):
+            date_val = entry.get('date', '-')
+            try:
+                dt = datetime.strptime(date_val, '%Y-%m-%d')
+                date_str = dt.strftime('%d.%m.%Y')
+            except:
+                date_str = date_val
+                
+            table_rows.append([
+                f"T{i+1}",
+                date_str,
+                f"{entry['chron_age']:.1f} J.",
+                f"{entry['bio_age']:.1f} J."
+            ])
+
+        # Nächste Messung als extra Zeile
+        next_text = "Nächste Messung empfohlen: in ca. 10 Monaten"
+        d_str = latest.get('date')
+        if d_str and str(d_str) not in ('-', 'nan', 'None'):
+            try:
+                import pandas as pd
+                last_date_dt = pd.to_datetime(d_str, errors='coerce')
+                
+                if pd.notna(last_date_dt):
+                    # 10 Monate später
+                    next_date = last_date_dt + timedelta(days=304)
+                    month_name = self._get_german_month(next_date.month)
+                    next_text = f"Nächste Messung empfohlen: ca. {month_name} {next_date.year}"
+            except Exception as e:
+                pass
+        
+        table_rows.append([next_text, "", "", ""])
+
+        t_hist = Table(table_rows, colWidths=[2*cm, 5*cm, 5.5*cm, 5.5*cm])
+        t_hist.setStyle(TableStyle([
+            ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+            ('BACKGROUND', (0,0), (-1,0), colors.whitesmoke),
+            ('GRID', (0,0), (-1,-1), 0.5, colors.grey),
+            ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+            ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+            ('FONTSIZE', (0,0), (-1,-1), 9),
+        ]))
+        
+        # Falls nächste Messung Zeile existiert, spanne sie über die ganze Breite
+        if len(table_rows) > len(history) + 1:
+            last_idx = len(table_rows) - 1
+            t_hist.setStyle(TableStyle([
+                ('SPAN', (0, last_idx), (-1, last_idx)),
+                ('ALIGN', (0, last_idx), (-1, last_idx), 'CENTER'),
+                ('FONTNAME', (0, last_idx), (-1, last_idx), 'Helvetica-BoldOblique'),
+                ('BACKGROUND', (0, last_idx), (-1, last_idx), UNIBAS_MINT_HELL),
+                ('TOPPADDING', (0, last_idx), (-1, last_idx), 10),
+                ('BOTTOMPADDING', (0, last_idx), (-1, last_idx), 10),
+                ('LINEABOVE', (0, last_idx), (-1, last_idx), 1, colors.grey),
+            ]))
+
+        elements.append(t_hist)
+        
+        # Graphik
+        plot_path = plot_dict.get("maturity_plot.png")
+        if plot_path and os.path.exists(plot_path):
+            elements.append(Spacer(1, 0.3*cm))
+            # 15cm Breite / 1.71 Ratio (6/3.5) = ca. 8.75cm Höhe für Unverzerrtheit
+            img = Image(plot_path, width=15*cm, height=8.75*cm)
+            elements.append(img)
+            
+        doi_link = '<a href="https://doi.org/10.1249/00005768-200204000-00020" color="blue">10.1249/00005768-200204000-00020</a>'
+        info_text = f"""
+        <i>Berechnet nach Mirwald et al. (2002), DOI: {doi_link}.<br/>
+        Der Wachstumsschub (PHV) tritt bei Mädchen typischerweise um das 12. Lebensjahr und bei Jungen um das 14. Lebensjahr auf. 
+        Die Grafik zeigt, wie viele Jahre das Kind noch vom Schub entfernt ist (negativ) oder wie lange dieser bereits zurückliegt (positiv).</i>
+        """
+        elements.append(Paragraph(info_text, self.styles['ExplanationSmall']))
+        elements.append(Spacer(1, 0.5*cm))
+        return elements
+
     def build_report(self, metrics, plot_files):
         doc = SimpleDocTemplate(self.out_file, pagesize=A4, rightMargin=1.5*cm, leftMargin=1.5*cm, topMargin=1.5*cm, bottomMargin=1.5*cm)
         story = []
@@ -228,5 +356,22 @@ class ReportGenerator:
                 
                 block.append(Spacer(1, 0.8*cm)) 
                 story.append(KeepTogether(block))
+
+            # NEU: Maturity Block nach der Anthropometrie (erste Sektion)
+            if section_title == "Anthropometrie":
+                story.extend(self._create_maturity_block(patient_meta, plot_dict))
+
+        # --- IMPRESSUM AM ENDE ---
+        story.append(Spacer(1, 2*cm))
+        story.append(Paragraph("Kontakt & Impressum", self.styles['SectionHeader']))
+        
+        impressum_text = """
+        <b>DECADE Studie:</b> <a href="https://decade.dsbg.unibas.ch/de/" color="blue">https://decade.dsbg.unibas.ch/de/</a><br/>
+        <b>Leitung:</b> Romina Ledergerber & Ralf Roth<br/>
+        Departement für Sport, Bewegung und Gesundheit<br/>
+        Grosse Allee 6, 4052 Basel, Switzerland<br/><br/>
+        <b>Kontakt:</b> <a href="mailto:romina.ledergerber@unibas.ch" color="blue">romina.ledergerber@unibas.ch</a> | +41 61 207 47 73
+        """
+        story.append(Paragraph(impressum_text, self.styles['Impressum']))
 
         doc.build(story)
