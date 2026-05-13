@@ -131,9 +131,17 @@ class Analyzer:
                 
             # Beinstrecker Relativ
             p_df['leg_ext_rel_calculated'] = p_df['beinstrecker_combined'] / weight
+            
+            # Handkraft Relativ
+            if 'crf_handgrip' in p_df.columns:
+                hand_abs = self._safe_numeric(p_df['crf_handgrip'])
+                p_df['handkraft_rel_calculated'] = hand_abs / weight
+            else:
+                p_df['handkraft_rel_calculated'] = np.nan
         else:
             p_df['mtp_rel_calculated'] = np.nan
             p_df['leg_ext_rel_calculated'] = np.nan
+            p_df['handkraft_rel_calculated'] = np.nan
 
         # --- 5. Maturity Offset nach Mirwald (NEU mit Verlauf) ---
         maturity_history = []
@@ -180,6 +188,7 @@ class Analyzer:
         full_map["pmax_rel"] = "pmax_rel_calculated"             # RELATIV
         full_map["mtp_rel"] = "mtp_rel_calculated"               # RELATIV
         full_map["leg_ext_rel"] = "leg_ext_rel_calculated"       # RELATIV
+        full_map["handkraft_rel"] = "handkraft_rel_calculated"   # RELATIV
 
         for metric_name, col_name in full_map.items():
             val_pre, val_post, diff_pct = "-", "-", None
@@ -187,7 +196,7 @@ class Analyzer:
 
             if col_name in p_df.columns:
                 # Unterscheidung: selbst berechnete oder originale Spalten
-                if col_name in ["beinstrecker_combined", "pmax_rel_calculated", "mtp_rel_calculated", "leg_ext_rel_calculated"]:
+                if col_name in ["beinstrecker_combined", "pmax_rel_calculated", "mtp_rel_calculated", "leg_ext_rel_calculated", "handkraft_rel_calculated"]:
                     series = p_df[col_name]
                 else:
                     series = self._safe_numeric(p_df[col_name])

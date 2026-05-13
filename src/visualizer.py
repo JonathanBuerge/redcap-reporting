@@ -3,8 +3,8 @@ import pandas as pd
 import numpy as np
 from reference_data import (
     get_pmax_mass_reference, get_vo2max_reference, PMAX_ABS_DATA,
-    MTP_REL_DATA, MTP_ABS_DATA, LEG_EXT_DATA, HANDGRIP_DOM_DATA, HEIGHT_DATA, WEIGHT_DATA,
-    get_jump_height_reference
+    MTP_REL_DATA, MTP_ABS_DATA, KNEE_EXT_ABS_HEBERT, KNEE_EXT_REL_HEBERT, HANDGRIP_DOM_BOHANNON, get_relative_handgrip_bohannon, HEIGHT_DATA, WEIGHT_DATA,
+    get_jump_height_reference, get_smoothed_reference
 )
 
 class Visualizer:
@@ -26,26 +26,13 @@ class Visualizer:
         else:
             return m * ((1 + l * s * z) ** (1/l))
 
-    def create_reference_plot(self, metric_type, history_data, sex, output_path):
+    def create_reference_plot(self, metric_type, history_data, sex, output_path, patient_weight=None):
         plt.figure(figsize=(6, 4))
         # Höhere Auflösung für glatte Kurven
         ages = np.linspace(6, 18, 100)
         percentiles_data = {p: [] for p in self.colors.keys()}
 
-        def get_interpolated_ref(age, ref_dict):
-            """Hilfsfunktion für lineare Interpolation in Dictionaries."""
-            keys = sorted(ref_dict.keys())
-            if not keys: return [np.nan] * 7
-            age_clamped = max(min(age, max(keys)), min(keys))
-            if age_clamped in ref_dict: return ref_dict[age_clamped]
-            
-            low = max([k for k in keys if k <= age_clamped])
-            high = min([k for k in keys if k >= age_clamped])
-            
-            v_low = np.array(ref_dict[low])
-            v_high = np.array(ref_dict[high])
-            weight = (age_clamped - low) / (high - low)
-            return v_low + weight * (v_high - v_low)
+
         
         # --- REFERENZDATEN LADEN JE NACH METRIK ---
         if metric_type == 'sprung':
@@ -72,70 +59,83 @@ class Visualizer:
         elif metric_type == 'leistung':
             title = f"Max. Leistung Ergometer ({'Mädchen' if sex == 'girls' else 'Jungs'})"
             ylabel = "Leistung (Watt)"
-            ref_dict = PMAX_ABS_DATA.get(sex, {})
             p_names = ['P3', 'P10', 'P25', 'P50', 'P75', 'P90', 'P97']
             for age in ages:
-                vals = get_interpolated_ref(age, ref_dict)
+                vals = get_smoothed_reference(age, sex, PMAX_ABS_DATA)
                 for i, p in enumerate(p_names):
                     percentiles_data[p].append(vals[i])
 
         elif metric_type == 'mtp_rel':
-            title = f"Ganzkörperkraft (Vergleich: Athleten!)"
+            title = f"Ganzkörperkraft (Relativ) [Athleten-Norm!]"
             ylabel = "Kraft / Gewicht (kg/kg)"
-            ref_dict = MTP_REL_DATA.get(sex, {})
             p_names = ['P3', 'P10', 'P25', 'P50', 'P75', 'P90', 'P97']
             for age in ages:
-                vals = get_interpolated_ref(age, ref_dict)
+                vals = get_smoothed_reference(age, sex, MTP_REL_DATA)
                 for i, p in enumerate(p_names):
                     percentiles_data[p].append(vals[i])
 
         elif metric_type == 'beinstrecker':
             title = f"Max. Beinstreckkraft ({'Mädchen' if sex == 'girls' else 'Jungs'})"
             ylabel = "Kraft (Nm)"
-            ref_dict = LEG_EXT_DATA.get(sex, {})
-            p_names = ['P3', 'P10', 'P50', 'P90', 'P97']
+            p_names = ['P3', 'P10', 'P25', 'P50', 'P75', 'P90', 'P97']
             for age in ages:
-                vals = get_interpolated_ref(age, ref_dict)
+                vals = get_smoothed_reference(age, sex, KNEE_EXT_ABS_HEBERT)
+                for i, p in enumerate(p_names):
+                    percentiles_data[p].append(vals[i])
+                    
+        elif metric_type == 'leg_ext_rel':
+            title = f"Beinkraft Relativ ({'Mädchen' if sex == 'girls' else 'Jungs'})"
+            ylabel = "Kraft (Nm/kg)"
+            p_names = ['P3', 'P10', 'P25', 'P50', 'P75', 'P90', 'P97']
+            for age in ages:
+                vals = get_smoothed_reference(age, sex, KNEE_EXT_REL_HEBERT)
                 for i, p in enumerate(p_names):
                     percentiles_data[p].append(vals[i])
                     
         elif metric_type == 'handkraft':
-            title = f"Max. Handkraft ({'Mädchen' if sex == 'girls' else 'Jungs'})"
-            ylabel = "Kraft (kg)"
-            ref_dict = HANDGRIP_DOM_DATA.get(sex, {})
-            p_names = ['P3', 'P10', 'P50', 'P90', 'P97']
+            title = f"Maximale Greifkraft der dominanten Hand (kg)"
+            ylabel = "Maximale Kraft [kg]"
+            p_names = ['P3', 'P10', 'P25', 'P50', 'P75', 'P90', 'P97']
             for age in ages:
-                vals = get_interpolated_ref(age, ref_dict)
+                vals = get_smoothed_reference(age, sex, HANDGRIP_DOM_BOHANNON)
+                for i, p in enumerate(p_names):
+                    percentiles_data[p].append(vals[i])
+                    
+        elif metric_type == 'handkraft_rel':
+            title = f"Relative Greifkraft der dominanten Hand (kg/kg)"
+            ylabel = "Kraft / Körpergewicht [kg/kg]"
+            p_names = ['P3', 'P10', 'P25', 'P50', 'P75', 'P90', 'P97']
+            for age in ages:
+                # If patient_weight is provided, use it. Otherwise, default to something to avoid crashing (e.g., 50kg)
+                w = patient_weight if patient_weight and patient_weight > 0 else 50.0
+                vals = get_relative_handgrip_bohannon(age, sex, w)
                 for i, p in enumerate(p_names):
                     percentiles_data[p].append(vals[i])
 
         elif metric_type == 'kreuzheben':
-            title = f"Ganzkörperkraft (Absolut)"
+            title = f"Isom. Kreuzheben (Absolut) [Athleten-Norm!]"
             ylabel = "Kraft (kg)"
-            ref_dict = MTP_ABS_DATA.get(sex, {})
             p_names = ['P3', 'P10', 'P25', 'P50', 'P75', 'P90', 'P97']
             for age in ages:
-                vals = get_interpolated_ref(age, ref_dict)
+                vals = get_smoothed_reference(age, sex, MTP_ABS_DATA)
                 for i, p in enumerate(p_names):
                     percentiles_data[p].append(vals[i])
 
         elif metric_type == 'groesse':
             title = f"Körpergrösse ({'Mädchen' if sex == 'girls' else 'Jungs'})"
             ylabel = "Grösse (cm)"
-            ref_dict = HEIGHT_DATA.get(sex, {})
             p_names = ['P3', 'P10', 'P25', 'P50', 'P75', 'P90', 'P97']
             for age in ages:
-                vals = get_interpolated_ref(age, ref_dict)
+                vals = get_smoothed_reference(age, sex, HEIGHT_DATA)
                 for i, p in enumerate(p_names):
                     percentiles_data[p].append(vals[i])
 
         elif metric_type == 'gewicht':
             title = f"Körpergewicht ({'Mädchen' if sex == 'girls' else 'Jungs'})"
             ylabel = "Gewicht (kg)"
-            ref_dict = WEIGHT_DATA.get(sex, {})
             p_names = ['P3', 'P10', 'P25', 'P50', 'P75', 'P90', 'P97']
             for age in ages:
-                vals = get_interpolated_ref(age, ref_dict)
+                vals = get_smoothed_reference(age, sex, WEIGHT_DATA)
                 for i, p in enumerate(p_names):
                     percentiles_data[p].append(vals[i])
 
@@ -161,7 +161,7 @@ class Visualizer:
             plt.text(last_age, last_val + (last_val*0.05), "Du", color='red', fontweight='bold', ha='center', zorder=11)
 
         plt.title(title)
-        plt.xlabel("Alter (Jahre)")
+        plt.xlabel("Alter [Jahre]")
         plt.ylabel(ylabel)
         plt.grid(True, which='both', linestyle=':', alpha=0.6)
         plt.xlim(5.5, 19.5)

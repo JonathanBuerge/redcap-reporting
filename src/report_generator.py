@@ -35,9 +35,13 @@ class ReportGenerator:
                  "Ref: Deutschland, gesunde Kinder (KiGGS) | DOI: 10.1007/s001120170107", False)
             ]),
             ("Kraftmessungen", [
-                ("Max. Handkraft", "handkraft", "kg", "handkraft_ref.png", 
-                 "Maß für die allgemeine Kraft des Oberkörpers (gezeigt für die dominante Hand).", 
-                 "Ref: Australien (1000 Norms Project), gesunde Population | DOI: 10.1212/WNL.0000000000003466", False),
+                ("Max. Greifkraft (Absolut)", "handkraft", "kg", "handkraft_ref.png", 
+                 "Maß für die allgemeine Kraft des Oberkörpers (gezeigt für die dominante Hand). Methodischer Hinweis: Messung im Sitzen (Ellenbogen 90° flektiert, Unterarm neutral) mittels digitalem Jamar-Dynamometer (Griffposition 2).", 
+                 "Ref: Bohannon et al. (2017), Pediatric Physical Therapy. | Populationsbasierte Normwerte aus dem NIH Toolbox Projekt (n = 2.706).", False),
+                 
+                ("Greifkraft (Relativ)", "handkraft_rel", "kg/kg", "handkraft_rel_ref.png", 
+                 "Maximale Handkraft im Verhältnis zum Körpergewicht. Methodischer Hinweis: Messung im Sitzen (Ellenbogen 90° flektiert, Unterarm neutral) mittels digitalem Jamar-Dynamometer (Griffposition 2).", 
+                 "Ref: Bohannon et al. (2017), Pediatric Physical Therapy. | Populationsbasierte Normwerte aus dem NIH Toolbox Projekt (n = 2.706).", False),
                  
                 ("Sprunghöhe", "sprung", "cm", "sprung_ref.png", 
                  "Zeigt die Explosivität, Beinkraft und koordinative Schnellkraft.", 
@@ -48,19 +52,20 @@ class ReportGenerator:
                  "Ref: Tschechien, gesunde Kinder und Jugendliche | DOI: 10.1016/j.bone.2013.06.012", False),
                  
                 ("Isom. Kreuzheben (Absolut)", "kreuzheben", "kg", "kreuzheben_ref.png", 
-                 "Misst die statische Maximalkraft des gesamten Körpers.", 
-                 "Ref: Morris et al. (2020) Jungs & Salter et al. (2025) Mädchen", False),
+                 "Misst die statische Maximalkraft des gesamten Körpers. Achtung: Verglichen mit NachwuchsathletInnen!", 
+                 "Ref: Morris et al. (2020) Jungs & Salter et al. (2025) Mädchen (Athleten-Norm!)", False),
                  
                 ("Ganzkörperkraft (Relativ)", "mtp_rel", "kg/kg", "mtp_rel_ref.png", 
-                 "Statische Maximalkraft des Körpers im Verhältnis zum Körpergewicht.", 
+                 "Statische Maximalkraft des Körpers im Verhältnis zum Körpergewicht. Achtung: Verglichen mit NachwuchsathletInnen!", 
                  "Ref: Morris et al. (2020) Jungs & Salter et al. (2025) Mädchen (Athleten-Norm!)", False),
                  
                 ("Max. Beinstreckkraft (Absolut)", "beinstrecker", "Nm", "beinstrecker_ref.png", 
                  "Zeigt die isolierte, absolute Kraft der vorderen Oberschenkelmuskulatur (Drehmoment).", 
-                 "Ref: Australien (1000 Norms Project), gesunde Population | DOI: 10.1212/WNL.0000000000003466", False),
+                 "Ref: Kanada, gesunde Kinder und Jugendliche | Hébert et al. (2015)", False),
                  
-                ("Beinkraft (Relativ)", "leg_ext_rel", "Nm/kg", None, 
-                 "Isolierte Oberschenkelkraft im Verhältnis zum Körpergewicht.", "", True)
+                ("Beinkraft (Relativ)", "leg_ext_rel", "Nm/kg", "leg_ext_rel_ref.png", 
+                 "Isolierte Oberschenkelkraft im Verhältnis zum Körpergewicht.", 
+                 "Ref: Kanada, gesunde Kinder und Jugendliche | Hébert et al. (2015)", False)
             ]),
             ("Spiroergometrie", [
                 ("Ausdauer (VO2max)", "vo2max", "mL/kg/min", "vo2_ref.png", 
@@ -108,21 +113,25 @@ class ReportGenerator:
 
     def _create_header(self, patient_info):
         elements = []
-        title = Paragraph("DECADE Report", self.styles['ReportTitle'])
-        subtitle = Paragraph("Entwicklung der körperlichen Leistungsfähigkeit", self.styles['ReportSubTitle'])
+        title = Paragraph("<para align=center>DECADE Report</para>", self.styles['ReportTitle'])
+        subtitle = Paragraph("<para align=center>Entwicklung der körperlichen Leistungsfähigkeit</para>", self.styles['ReportSubTitle'])
         
-        # --- LOGO SUCHT JETZT IM DATA ORDNER ---
+        # --- LOGOS IM DATA ORDNER SUCHEN ---
         script_dir = os.path.dirname(os.path.abspath(__file__))
-        logo_path = os.path.join(script_dir, '..', 'data', 'logo.png')
-        if not os.path.exists(logo_path):
-            logo_path = os.path.join(script_dir, '..', 'data', 'logo.jpg')
+        decade_logo_path = os.path.join(script_dir, '..', 'data', 'decade_logo.jpg')
+        if not os.path.exists(decade_logo_path):
+            decade_logo_path = os.path.join(script_dir, '..', 'data', 'decade_logo.png')
+            
+        unibas_logo_path = os.path.join(script_dir, '..', 'data', 'logo.png')
 
-        if os.path.exists(logo_path):
-            img = Image(logo_path, width=5*cm, height=2*cm, kind='proportional')
-            header_table = Table([[ [title, subtitle], img ]], colWidths=[11*cm, 7*cm])
+        if os.path.exists(decade_logo_path) and os.path.exists(unibas_logo_path):
+            img_decade = Image(decade_logo_path, width=4*cm, height=1.6*cm, kind='proportional')
+            img_unibas = Image(unibas_logo_path, width=4*cm, height=1.6*cm, kind='proportional')
+            header_table = Table([[img_unibas, [title, subtitle], img_decade]], colWidths=[4*cm, 10*cm, 4*cm])
             header_table.setStyle(TableStyle([
                 ('ALIGN', (0,0), (0,0), 'LEFT'),
-                ('ALIGN', (1,0), (1,0), 'RIGHT'),
+                ('ALIGN', (1,0), (1,0), 'CENTER'),
+                ('ALIGN', (2,0), (2,0), 'RIGHT'),
                 ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
                 ('BOTTOMPADDING', (0,0), (-1,-1), 10),
             ]))
@@ -219,8 +228,8 @@ class ReportGenerator:
                 Paragraph(f"Biologisches Alter: <b>{bio_age:.1f} J.</b>", self.styles['MetricLabel'])
             ],
             [
-                Paragraph(f"Diff. Bio-Eff.: <b>{dev_age:+.1f} J.</b>", self.styles['MetricLabel']),
-                Paragraph(f"Diff. zu PHV: <b>{offset:+.1f} J.</b>", self.styles['MetricLabel'])
+                Paragraph(f"Diff. Biologisches Alter - Effektives Alter.: <b>{dev_age:+.1f} J.</b>", self.styles['MetricLabel']),
+                Paragraph(f"Diff. zu PHV (Wachstumsschub): <b>{offset:+.1f} J.</b>", self.styles['MetricLabel'])
             ]
         ]
         t_sum = Table(summary_data, colWidths=[9*cm, 9*cm])
@@ -362,16 +371,42 @@ class ReportGenerator:
                 story.extend(self._create_maturity_block(patient_meta, plot_dict))
 
         # --- IMPRESSUM AM ENDE ---
-        story.append(Spacer(1, 2*cm))
-        story.append(Paragraph("Kontakt & Impressum", self.styles['SectionHeader']))
+        impressum_block = []
+        impressum_block.append(Spacer(1, 1*cm))
+        impressum_block.append(Paragraph("Kontakt & Impressum", self.styles['SectionHeader']))
         
-        impressum_text = """
+        impressum_text_left = """<br/>
         <b>DECADE Studie:</b> <a href="https://decade.dsbg.unibas.ch/de/" color="blue">https://decade.dsbg.unibas.ch/de/</a><br/>
         <b>Leitung:</b> Romina Ledergerber & Ralf Roth<br/>
-        Departement für Sport, Bewegung und Gesundheit<br/>
-        Grosse Allee 6, 4052 Basel, Switzerland<br/><br/>
         <b>Kontakt:</b> <a href="mailto:romina.ledergerber@unibas.ch" color="blue">romina.ledergerber@unibas.ch</a> | +41 61 207 47 73
         """
-        story.append(Paragraph(impressum_text, self.styles['Impressum']))
+        
+        impressum_text_right = """<br/>
+        <b>Adresse:</b><br/>
+        Departement für Sport, Bewegung und Gesundheit<br/>
+        Grosse Allee 6, 4052 Basel, Switzerland
+        """
+        
+        p_left = Paragraph(impressum_text_left, self.styles['Impressum'])
+        p_right = Paragraph(impressum_text_right, self.styles['Impressum'])
+        
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        logo_path = os.path.join(script_dir, '..', 'data', 'decade_logo.jpg')
+        if not os.path.exists(logo_path):
+            logo_path = os.path.join(script_dir, '..', 'data', 'decade_logo.png')
+        
+        img_impressum = ""
+        if os.path.exists(logo_path):
+            img_impressum = Image(logo_path, width=4*cm, height=1.6*cm, kind='proportional')
+        
+        table = Table([[p_left, p_right, img_impressum]], colWidths=[8*cm, 6.5*cm, 4*cm])
+        table.setStyle(TableStyle([
+            ('VALIGN', (0,0), (-1,-1), 'TOP'),
+            ('ALIGN', (2,0), (2,0), 'RIGHT'),
+            ('LEFTPADDING', (0,0), (-1,-1), 0),
+            ('RIGHTPADDING', (0,0), (-1,-1), 0),
+        ]))
+        impressum_block.append(table)
+        story.append(KeepTogether(impressum_block))
 
         doc.build(story)

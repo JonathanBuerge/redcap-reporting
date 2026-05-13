@@ -21,11 +21,13 @@ PLOTS_CONFIG = [
     ("gewicht", "gewicht_ref.png"),
     # Kraft
     ("handkraft", "handkraft_ref.png"),
+    ("handkraft_rel", "handkraft_rel_ref.png"),
     ("sprung", "sprung_ref.png"),
     ("pmax_rel", "pmax_rel_ref.png"),
     ("kreuzheben", "kreuzheben_ref.png"),
     ("mtp_rel", "mtp_rel_ref.png"),
     ("beinstrecker", "beinstrecker_ref.png"),
+    ("leg_ext_rel", "leg_ext_rel_ref.png"),
     ("vo2max", "vo2_ref.png"),
     ("leistung", "leistung_abs_ref.png")  
 ]
@@ -48,10 +50,7 @@ def main():
     print(f"👥 {len(all_ids)} Patienten in CSV gefunden.\n")
 
     # === SCHRANKE FÜR TESTLÄUFE (ENERGIE SPAREN) ===
-    # WICHTIG: Entferne das "[:15]", wenn du später wieder alle Patienten generieren willst!
-    #patient_ids_to_process = all_ids#[:15]
-    target_ids = ["decad_141", "141", "decad_142", "142", "decad_143", "143", "decad_102", "102", "decad_105", "105"]
-    patient_ids_to_process = [pid for pid in all_ids if str(pid) in target_ids] 
+    patient_ids_to_process = all_ids
 
 
     count = 0
@@ -82,7 +81,13 @@ def main():
             if hist_data and p_age is not None:
                 plot_path = f"{plots_dir}/{filename}"
                 try:
-                    viz.create_reference_plot(metric_key, hist_data, p_sex, plot_path)
+                    patient_weight = metrics_data.get("gewicht", {}).get("post")
+                    try:
+                        patient_weight = float(patient_weight)
+                    except (ValueError, TypeError):
+                        patient_weight = None
+                        
+                    viz.create_reference_plot(metric_key, hist_data, p_sex, plot_path, patient_weight)
                     if os.path.exists(plot_path):
                         plot_files.append(plot_path)
                         debug_log(str_id, f"   ✅ Plot erstellt: {metric_key} ({len(hist_data)} Messpunkte)")
