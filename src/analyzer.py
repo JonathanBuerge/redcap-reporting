@@ -93,9 +93,23 @@ class Analyzer:
                     last_date = pd.to_datetime(last_date_raw).strftime('%d.%m.%Y')
                 except: last_date = str(last_date_raw)
 
+        # --- ID Aufbereitung für den Report ---
+        display_id = str(patient_id)
+        if 'crf_id' in p_df.columns:
+            # Nimm die crf_id vom aktuellsten Eintrag
+            potential_crf_id = p_df['crf_id'].dropna().iloc[-1] if not p_df['crf_id'].dropna().empty else ""
+            if str(potential_crf_id).strip():
+                display_id = str(potential_crf_id).strip()
+            else:
+                # Fallback: Nur Zahlen aus record_id (z.B. decad_105 -> 105)
+                display_id = "".join(filter(str.isdigit, str(patient_id)))
+        else:
+            # Fallback: Nur Zahlen aus record_id
+            display_id = "".join(filter(str.isdigit, str(patient_id)))
+
         results = {
             "meta": {
-                "ID": patient_id,
+                "ID": display_id,
                 "Name": "", 
                 "Messdatum": last_date,
                 "age": current_age,

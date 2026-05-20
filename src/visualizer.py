@@ -219,3 +219,143 @@ class Visualizer:
         plt.tight_layout()
         plt.savefig(output_path, dpi=150)
         plt.close()
+
+    def create_overview_plot(self, metric_type, all_patients_histories, sex, output_path):
+        """
+        Zeichnet einen Übersichts-Plot mit Referenzkurven und den Verläufen
+        ALLER übergebenen Patienten auf einem Graphen.
+
+        Args:
+            metric_type:            Metrischer Schlüssel (z.B. 'groesse', 'vo2max')
+            all_patients_histories: Liste von Tupeln (patient_id, history_data, patient_weight)
+            sex:                    'girls' oder 'boys'
+            output_path:            Zieldateipfad
+        """
+        patient_colors = [
+            '#e6194b', '#3cb44b', '#4363d8', '#f58231', '#911eb4',
+            '#42d4f4', '#f032e6', '#bfef45', '#469990', '#dcbeff',
+            '#9A6324', '#800000', '#aaffc3', '#808000', '#000075',
+            '#a9a9a9', '#000000', '#ffd8b1', '#fabed4', '#fffac8',
+        ]
+
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ages = np.linspace(6, 18, 100)
+        percentiles_data = {p: [] for p in self.colors.keys()}
+        p_names = ['P3', 'P10', 'P25', 'P50', 'P75', 'P90', 'P97']
+
+        sex_label = 'Mädchen' if sex == 'girls' else 'Jungs'
+        ylabel = ""
+
+        if metric_type == 'sprung':
+            title, ylabel = f"Sprunghöhe – ALLE ({sex_label})", "Sprunghöhe (cm)"
+            for age in ages:
+                refs = get_jump_height_reference(age, sex)
+                for p in refs: percentiles_data[p].append(refs[p])
+
+        elif metric_type == 'pmax_rel':
+            title, ylabel = f"Sprungkraft/kg – ALLE ({sex_label})", "Leistung (W/kg)"
+            for age in ages:
+                refs = get_pmax_mass_reference(age, sex)
+                for p in refs: percentiles_data[p].append(refs[p])
+
+        elif metric_type == 'vo2max':
+            title, ylabel = f"VO2max – ALLE ({sex_label})", "mL/kg/min"
+            for age in ages:
+                refs = get_vo2max_reference(age, sex)
+                for p in refs: percentiles_data[p].append(refs[p])
+
+        elif metric_type == 'leistung':
+            title, ylabel = f"Max. Leistung – ALLE ({sex_label})", "Leistung (Watt)"
+            for age in ages:
+                vals = get_smoothed_reference(age, sex, PMAX_ABS_DATA)
+                for i, p in enumerate(p_names): percentiles_data[p].append(vals[i])
+
+        elif metric_type == 'mtp_rel':
+            title, ylabel = "Ganzkörperkraft Relativ – ALLE [Athleten-Norm!]", "kg/kg"
+            for age in ages:
+                vals = get_smoothed_reference(age, sex, MTP_REL_DATA)
+                for i, p in enumerate(p_names): percentiles_data[p].append(vals[i])
+
+        elif metric_type == 'beinstrecker':
+            title, ylabel = f"Max. Beinstreckkraft – ALLE ({sex_label})", "Kraft (Nm)"
+            for age in ages:
+                vals = get_smoothed_reference(age, sex, KNEE_EXT_ABS_HEBERT)
+                for i, p in enumerate(p_names): percentiles_data[p].append(vals[i])
+
+        elif metric_type == 'leg_ext_rel':
+            title, ylabel = f"Beinkraft Relativ – ALLE ({sex_label})", "Kraft (Nm/kg)"
+            for age in ages:
+                vals = get_smoothed_reference(age, sex, KNEE_EXT_REL_HEBERT)
+                for i, p in enumerate(p_names): percentiles_data[p].append(vals[i])
+
+        elif metric_type == 'handkraft':
+            title, ylabel = f"Greifkraft Absolut – ALLE ({sex_label})", "Kraft (kg)"
+            for age in ages:
+                vals = get_smoothed_reference(age, sex, HANDGRIP_DOM_BOHANNON)
+                for i, p in enumerate(p_names): percentiles_data[p].append(vals[i])
+
+        elif metric_type == 'handkraft_rel':
+            title, ylabel = f"Greifkraft Relativ – ALLE ({sex_label})", "kg/kg"
+            weights = [w for _, _, w in all_patients_histories if w and w > 0]
+            avg_weight = float(np.mean(weights)) if weights else 40.0
+            for age in ages:
+                vals = get_relative_handgrip_bohannon(age, sex, avg_weight)
+                for i, p in enumerate(p_names): percentiles_data[p].append(vals[i])
+
+        elif metric_type == 'kreuzheben':
+            title, ylabel = "Isom. Kreuzheben – ALLE [Athleten-Norm!]", "Kraft (kg)"
+            for age in ages:
+                vals = get_smoothed_reference(age, sex, MTP_ABS_DATA)
+                for i, p in enumerate(p_names): percentiles_data[p].append(vals[i])
+
+        elif metric_type == 'groesse':
+            title, ylabel = f"Körpergrösse – ALLE ({sex_label})", "Grösse (cm)"
+            for age in ages:
+                vals = get_smoothed_reference(age, sex, HEIGHT_DATA)
+                for i, p in enumerate(p_names): percentiles_data[p].append(vals[i])
+
+        elif metric_type == 'gewicht':
+            title, ylabel = f"Körpergewicht – ALLE ({sex_label})", "Gewicht (kg)"
+            for age in ages:
+                vals = get_smoothed_reference(age, sex, WEIGHT_DATA)
+                for i, p in enumerate(p_names): percentiles_data[p].append(vals[i])
+        else:
+            plt.close(fig)
+            return
+
+        # Referenzkurven zeichnen
+        for p_name in ['P3', 'P10', 'P25', 'P75', 'P90', 'P97', 'P50']:
+            y_vals = percentiles_data[p_name]
+            if not y_vals:
+                continue
+            width = 2 if p_name == 'P50' else 1
+            style = '-' if p_name == 'P50' else '--'
+            ax.plot(ages, y_vals, color=self.colors[p_name], linestyle=style,
+                    linewidth=width, zorder=2)
+            if not np.isnan(y_vals[-1]):
+                ax.text(ages[-1] + 0.2, y_vals[-1], p_name, fontsize=7,
+                        color=self.colors[p_name], va='center')
+
+        # Alle Patientenlinien zeichnen
+        for idx, (p_id, history, _weight) in enumerate(all_patients_histories):
+            if not history:
+                continue
+            color = patient_colors[idx % len(patient_colors)]
+            p_ages, p_vals = zip(*history)
+            ax.plot(p_ages, p_vals, color=color, linestyle='-', linewidth=1.5,
+                    alpha=0.85, zorder=5, label=str(p_id))
+            ax.plot(p_ages[-1], p_vals[-1], 'o', color=color, markersize=6, zorder=6)
+
+        ax.set_title(title, fontsize=12, fontweight='bold')
+        ax.set_xlabel("Alter [Jahre]")
+        ax.set_ylabel(ylabel)
+        ax.grid(True, which='both', linestyle=':', alpha=0.5)
+        ax.set_xlim(5.5, 19.5)
+
+        if all_patients_histories:
+            ax.legend(fontsize=7, loc='upper left', bbox_to_anchor=(1.01, 1),
+                      borderaxespad=0, title="Patienten", title_fontsize=8)
+
+        fig.tight_layout()
+        fig.savefig(output_path, dpi=150, bbox_inches='tight')
+        plt.close(fig)

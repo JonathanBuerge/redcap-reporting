@@ -1,7 +1,8 @@
+# DECADE Reporting – Abhängigkeiten
+# Installation: pip install -r requirements.txt
+
 pandas
 matplotlib
 reportlab
-streamlit
-plotly
 requests
 python-dotenv
