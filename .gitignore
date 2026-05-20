@@ -6,3 +6,6 @@ __pycache__/
 .DS_Store
 .env
 api_data.csv
+decade_log.txt
+*.log
+*.txt
