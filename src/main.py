@@ -28,12 +28,18 @@ GENERATE_OVERVIEW: bool = True
 
 # DEFINITION DER PLOTS (Reihenfolge hier = Reihenfolge im PDF)
 PLOTS_CONFIG = [
-    ("groesse", "groesse_ref.png"), ("gewicht", "gewicht_ref.png"),
-    ("handkraft", "handkraft_ref.png"), ("handkraft_rel", "handkraft_rel_ref.png"),
-    ("sprung", "sprung_ref.png"), ("pmax_rel", "pmax_rel_ref.png"),
-    ("kreuzheben", "kreuzheben_ref.png"), ("mtp_rel", "mtp_rel_ref.png"),
-    ("beinstrecker", "beinstrecker_ref.png"), ("leg_ext_rel", "leg_ext_rel_ref.png"),
-    ("vo2max", "vo2_ref.png"), ("leistung", "leistung_abs_ref.png")  
+    ("groesse",        "groesse_abs.png"),
+    ("gewicht",        "gewicht_abs.png"),
+    ("handkraft",      "handkraft_abs.png"),
+    ("handkraft_rel",  "handkraft_rel.png"),
+    ("sprung",         "sprung_abs.png"),
+    ("sprung_rel",     "sprung_rel.png"),
+    ("kreuzheben",     "kreuzheben_abs.png"),
+    ("kreuzheben_rel", "kreuzheben_rel.png"),
+    ("beinstrecker",   "beinstrecker_abs.png"),
+    ("beinstrecker_rel","beinstrecker_rel.png"),
+    ("vo2max",         "vo2max_abs.png"),
+    ("leistung",       "leistung_abs.png"),
 ]
 
 def setup_logging():
@@ -64,6 +70,243 @@ def push_report_to_redcap(patient_id: str, file_path: str) -> None:
     if not success:
         logging.warning("Patient %s: REDCap Upload nicht erfolgreich.", patient_id)
 
+# ============================================================
+# TODO: LÖSCHEN – DEV-Hilfsfunktion für PHV-Übersichtstabelle
+# und Scatter-Plots (effektives Alter vs. biologisches Alter,
+# Eq1/2 vs Eq3/4 Vergleich)
+# ============================================================
+def _dev_build_phv_content(patients_for_sex: list, sex: str, tmp_dir: str):
+    """
+    Erstellt:
+      1. Eine ReportLab-Tabelle mit PHV-Werten aller Patienten (alle MZP)
+         – inkl. bio_age_eq12 und bio_age_eq34 sowie deren Differenz zum eff. Alter
+      2. Scatter-Plot 1: Eq3/4 – Eff. Alter vs. Biol. Alter
+      3. Scatter-Plot 2: Eq1/2 – Eff. Alter vs. Biol. Alter
+      4. Scatter-Plot 3: Eq1/2 vs. Eq3/4 (direkter Vergleich)
+    Gibt (story_elements, list[scatter_path]) zurück.
+    """
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+    import numpy as np
+    from reportlab.platypus import Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib import colors
+    from reportlab.lib.units import cm
+    from reportlab.lib.styles import getSampleStyleSheet
+
+    styles = getSampleStyleSheet()
+    story_elements = []
+
+    # --- Tabelle ---
+    header = [
+        "ID", "MZP", "Datum",
+        "Eff. Alter",
+        "Offset Eq3/4", "Bio Eq3/4", "Diff Eq3/4",
+        "Offset Eq1/2", "Bio Eq1/2", "Diff Eq1/2",
+    ]
+    # Sub-header row for raw values (shown once, visually anchored to header)
+    subheader = [
+        "", "", "↳ Rohdaten:",
+        "Grösse (cm)", "Gewicht (kg)", "Sitzhöhe (cm)", "Beinlänge (cm)", "", "", "",
+    ]
+    rows = [header, subheader]
+
+    scatter_chron       = []
+    scatter_bio_eq34    = []
+    scatter_bio_eq12    = []
+    diff_eq34_list      = []
+    diff_eq12_list      = []
+    # Track which row indices are "raw" rows (for styling)
+    raw_row_indices = [1]  # subheader is index 1
+    formula_row_indices = []
+
+    for p_id, mdata in patients_for_sex:
+        history = mdata.get("meta", {}).get("maturity_history", [])
+        for i, entry in enumerate(history):
+            chron       = entry.get("chron_age")
+            off_eq34    = entry.get("off_eq34")
+            if off_eq34 is None:
+                off_eq34 = entry.get("offset")
+            bio_eq34    = entry.get("bio_age_eq34")
+            if bio_eq34 is None:
+                bio_eq34 = entry.get("bio_age")
+            off_eq12    = entry.get("off_eq12")
+            bio_eq12    = entry.get("bio_age_eq12")
+            date        = entry.get("date", "-")
+            # Raw input values
+            raw_h   = entry.get("raw_h")
+            raw_w   = entry.get("raw_w")
+            raw_sh  = entry.get("raw_sh")
+            raw_leg = entry.get("raw_leg")
+
+            if chron is None:
+                continue
+
+            def _diff_str(bio, lst):
+                if bio is not None:
+                    d = bio - chron
+                    lst.append(d)
+                    return f"{d:+.2f}"
+                return "-"
+
+            diff_34_str = _diff_str(bio_eq34, diff_eq34_list)
+            diff_12_str = _diff_str(bio_eq12, diff_eq12_list)
+
+            # --- Zeile 1: Ergebnisse ---
+            rows.append([
+                str(p_id),
+                f"T{i+1}",
+                str(date)[:10],
+                f"{chron:.1f}",
+                f"{off_eq34:.2f}" if off_eq34 is not None else "-",
+                f"{bio_eq34:.1f}" if bio_eq34 is not None else "-",
+                diff_34_str,
+                f"{off_eq12:.2f}" if off_eq12 is not None else "-",
+                f"{bio_eq12:.1f}" if bio_eq12 is not None else "-",
+                diff_12_str,
+            ])
+
+            # --- Zeile 2: Rohdaten ---
+            raw_row_indices.append(len(rows))  # index before append
+            rows.append([
+                "",
+                "",
+                "↳ Rohwerte:",
+                f"G: {raw_h} cm"   if raw_h   is not None else "-",
+                f"W: {raw_w} kg"   if raw_w   is not None else "-",
+                f"SH: {raw_sh} cm" if raw_sh  is not None else "-",
+                f"BL: {raw_leg} cm"if raw_leg is not None else "-",
+                "",
+                "",
+                "",
+            ])
+
+            # --- Zeile 3: Rechnung ---
+            f_eq34_str = entry.get("f_eq34_str", "-")
+            f_eq12_str = entry.get("f_eq12_str", "-")
+            formula_row_indices.append(len(rows))
+            rows.append([
+                "",
+                "",
+                "↳ Formeln:",
+                Paragraph(f"<font size=5><b>Eq3/4:</b> {f_eq34_str}<br/><b>Eq1/2:</b> {f_eq12_str}</font>", styles['Normal']),
+                "", "", "", "", "", ""
+            ])
+
+            if chron is not None:
+                scatter_chron.append(chron)
+                if bio_eq34 is not None:
+                    scatter_bio_eq34.append(bio_eq34)
+                if bio_eq12 is not None:
+                    scatter_bio_eq12.append(bio_eq12)
+
+
+    # Durchschnittszeile
+    avg_cells = [
+        "", "", "", "Ø Diff.:",
+        "", "", Paragraph(f"<b>{np.mean(diff_eq34_list):+.2f}</b>", styles['Normal']) if diff_eq34_list else "-",
+        "", "", Paragraph(f"<b>{np.mean(diff_eq12_list):+.2f}</b>", styles['Normal']) if diff_eq12_list else "-"
+    ]
+    rows.append(avg_cells)
+
+    story_elements.append(Paragraph(
+        f"<b>TODO: LÖSCHEN – PHV-Daten ({'Mädchen' if sex == 'girls' else 'Jungs'})</b>",
+        styles['Heading2']
+    ))
+    story_elements.append(Spacer(1, 0.3*cm))
+
+    col_widths = [1.8*cm, 1.0*cm, 1.9*cm, 1.6*cm, 1.8*cm, 1.6*cm, 1.7*cm, 1.8*cm, 1.6*cm, 1.7*cm]
+    tbl = Table(rows, colWidths=col_widths, repeatRows=2)
+    base_style = [
+        ('BACKGROUND',    (0, 0),  (-1, 0),   colors.HexColor('#b2dfdb')),
+        ('BACKGROUND',    (0, 1),  (-1, 1),   colors.HexColor('#e8f5e9')),
+        ('FONTNAME',      (0, 0),  (-1, 1),   'Helvetica-Bold'),
+        ('FONTSIZE',      (0, 0),  (-1, -1),  7),
+        ('GRID',          (0, 0),  (-1, -1),  0.4, colors.grey),
+        ('BACKGROUND',    (0, -1), (-1, -1),  colors.HexColor('#e0f2f1')),
+        ('ALIGN',         (3, 0),  (-1, -1),  'CENTER'),
+    ]
+    # Style raw-value rows: light grey background + italic font
+    for ri in raw_row_indices:
+        if ri < len(rows):
+            base_style.append(('BACKGROUND', (0, ri), (-1, ri), colors.HexColor('#f0f0f0')))
+            base_style.append(('FONTNAME',   (0, ri), (-1, ri), 'Helvetica-Oblique'))
+            base_style.append(('TEXTCOLOR',  (0, ri), (-1, ri), colors.HexColor('#555555')))
+            
+    # Style formula rows: light yellow background + span columns
+    for ri in formula_row_indices:
+        if ri < len(rows):
+            base_style.append(('BACKGROUND', (0, ri), (-1, ri), colors.HexColor('#fff9c4')))
+            base_style.append(('SPAN', (3, ri), (-1, ri)))
+            base_style.append(('ALIGN', (3, ri), (-1, ri), 'LEFT'))
+            
+    tbl.setStyle(TableStyle(base_style))
+    story_elements.append(tbl)
+    story_elements.append(Spacer(1, 0.5*cm))
+
+    # --- Scatter-Plots ---
+    scatter_paths = []
+    sex_label_text = 'Mädchen' if sex == 'girls' else 'Jungs'
+    ref_phv = 14.0 if sex == 'boys' else 12.0
+    pt_color = '#e53935' if sex == 'boys' else '#8e24aa'
+
+    def _scatter_base(ax, x, y, xlabel, ylabel, title, ref_line=True):
+        ax.scatter(x, y, alpha=0.65, s=35, color=pt_color, zorder=3)
+        if ref_line:
+            all_v = list(x) + list(y)
+            lo, hi = min(all_v) - 0.5, max(all_v) + 0.5
+            ax.plot([lo, hi], [lo, hi], 'k--', lw=1, label='y = x')
+            ax.axhline(ref_phv, color='grey', lw=0.8, ls=':', label=f'Ø PHV ({ref_phv} J.)')
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+        ax.set_title(title)
+        ax.legend(fontsize=7)
+        ax.grid(True, alpha=0.3)
+
+    # Plot 1: Eq3/4 – eff. Alter vs. biol. Alter
+    if scatter_chron and scatter_bio_eq34:
+        fig, ax = plt.subplots(figsize=(8, 5))
+        _scatter_base(ax, scatter_chron, scatter_bio_eq34,
+                      'Effektives Alter (J.)', 'Biologisches Alter Eq3/4 (J.)',
+                      f'TODO: LÖSCHEN – Eff. vs. Bio. Alter Eq3/4 ({sex_label_text})')
+        p = os.path.join(tmp_dir, f"phv_scatter_eq34_{sex}.png")
+        fig.tight_layout(); fig.savefig(p, dpi=120); plt.close(fig)
+        scatter_paths.append(p)
+
+    # Plot 2: Eq1/2 – eff. Alter vs. biol. Alter
+    if scatter_chron and scatter_bio_eq12:
+        fig, ax = plt.subplots(figsize=(8, 5))
+        _scatter_base(ax, scatter_chron, scatter_bio_eq12,
+                      'Effektives Alter (J.)', 'Biologisches Alter Eq1/2 (J.)',
+                      f'TODO: LÖSCHEN – Eff. vs. Bio. Alter Eq1/2 ({sex_label_text})')
+        p = os.path.join(tmp_dir, f"phv_scatter_eq12_{sex}.png")
+        fig.tight_layout(); fig.savefig(p, dpi=120); plt.close(fig)
+        scatter_paths.append(p)
+
+    # Plot 3: Eq1/2 vs. Eq3/4 – direkter Vergleich
+    if scatter_bio_eq12 and scatter_bio_eq34:
+        n = min(len(scatter_bio_eq12), len(scatter_bio_eq34))
+        fig, ax = plt.subplots(figsize=(8, 5))
+        ax.scatter(scatter_bio_eq34[:n], scatter_bio_eq12[:n],
+                   alpha=0.65, s=35, color=pt_color, zorder=3)
+        lo = min(scatter_bio_eq34[:n] + scatter_bio_eq12[:n]) - 0.5
+        hi = max(scatter_bio_eq34[:n] + scatter_bio_eq12[:n]) + 0.5
+        ax.plot([lo, hi], [lo, hi], 'k--', lw=1, label='Eq1/2 = Eq3/4')
+        ax.set_xlabel('Biologisches Alter Eq3/4 (J.)')
+        ax.set_ylabel('Biologisches Alter Eq1/2 (J.)')
+        ax.set_title(f'TODO: LÖSCHEN – Eq1/2 vs. Eq3/4 Vergleich ({sex_label_text})')
+        ax.legend(fontsize=7)
+        ax.grid(True, alpha=0.3)
+        p = os.path.join(tmp_dir, f"phv_scatter_cmp_{sex}.png")
+        fig.tight_layout(); fig.savefig(p, dpi=120); plt.close(fig)
+        scatter_paths.append(p)
+
+    return story_elements, scatter_paths
+# ============================================================
+# ENDE TODO: LÖSCHEN
+# ============================================================
+
+
 def main():
     setup_logging()
     logging.info("="*50)
@@ -73,6 +316,7 @@ def main():
     parser = argparse.ArgumentParser(description="DECADE Report Generator")
     parser.add_argument("--auto", action="store_true", help="Automatisch neue Messungen aus REDCap ermitteln")
     parser.add_argument("--ids", nargs="+", help="Spezifische IDs manuell verarbeiten (z.B. --ids 101 105)")
+    parser.add_argument("--lang", type=str, default=None, choices=["de", "en"], help="Sprache für die Berichte (überschreibt REDCap-Metadaten)")
     args = parser.parse_args()
 
     # 2. Zu verarbeitende IDs ermitteln
@@ -102,8 +346,8 @@ def main():
             logging.error("Ungültige Eingabe.")
             return
 
-    # DEV-MODUS: Wenn DEV_IDS gesetzt, nur diese verarbeiten
-    if DEV_IDS:
+    # DEV-MODUS: Wenn DEV_IDS gesetzt und keine spezifischen IDs übergeben wurden, nur diese verarbeiten
+    if DEV_IDS and not args.ids:
         logging.warning(
             "⚠️  ENTWICKLUNGS-MODUS AKTIV – nur %d Test-IDs werden verarbeitet: %s",
             len(DEV_IDS), ', '.join(DEV_IDS)
@@ -124,7 +368,9 @@ def main():
         return
 
     analyzer = Analyzer(df)
-    viz = Visualizer()
+    # Sprache für diesen Lauf bestimmen (manuell oder Default)
+    run_lang = args.lang if args.lang else 'de'
+    viz = Visualizer(lang=run_lang)
     count = 0
 
     dev_overview: dict[str, list] = {'girls': [], 'boys': []}
@@ -196,8 +442,9 @@ def main():
 
         # PDF Generierung & Upload
         report_file = f"{patient_dir}/report.pdf"
+        lang = args.lang if args.lang else metrics_data["meta"].get("language", "de")
         try:
-            report = ReportGenerator(report_file)
+            report = ReportGenerator(report_file, lang=lang)
             report.build_report(metrics_data, plot_files)
             count += 1
             logging.info(f"Patient {str_id}: PDF erfolgreich generiert ({report_file})")
@@ -274,6 +521,19 @@ def main():
                 for plot_path in overview_plot_files:
                     story.append(Image(plot_path, width=18*cm, height=11*cm))
                     story.append(Spacer(1, 0.5*cm))
+
+                # --- TODO: LÖSCHEN – PHV-Tabelle + Scatter ---
+                phv_story, scatter_paths = _dev_build_phv_content(
+                    patients_for_sex, sex, overview_base
+                )
+                story.extend(phv_story)
+                from reportlab.platypus import Image as RLImage
+                for sp in (scatter_paths or []):
+                    if sp and os.path.exists(sp):
+                        story.append(RLImage(sp, width=17*cm, height=10*cm))
+                        story.append(Spacer(1, 0.5*cm))
+                # --- ENDE TODO: LÖSCHEN ---
+
 
                 doc.build(story)
                 logging.info("  ✅ Übersichts-PDF: %s", overview_pdf)

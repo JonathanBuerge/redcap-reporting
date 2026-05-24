@@ -1,11 +1,10 @@
-data/*
-reports/*
+data/
+reports/
 __pycache__/
 *.pyc
-.env
 .DS_Store
 .env
-api_data.csv
+*.csv
 decade_log.txt
 *.log
 *.txt

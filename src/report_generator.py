@@ -18,65 +18,264 @@ UNIBAS_ANTHRAZIT_HELL = HexColor('#46505A')
 UNIBAS_GREEN = HexColor('#2E7D32')
 
 class ReportGenerator:
-    def __init__(self, out_file: str):
+    def __init__(self, out_file: str, lang: str = 'de'):
         self.out_file = out_file
+        self.lang = lang
         self.styles = getSampleStyleSheet()
         self._create_custom_styles()
 
+        # --- MEHRSPRACHIGE LABELS ---
+        self._labels = {
+            'de': {
+                'start':             'Start',
+                'current':           'Aktuell',
+                'diff':              'Diff',
+                'anthropometrie':    'Anthropometrie',
+                'kraft':             'Kraftmessungen',
+                'spiro':             'Spiroergometrie',
+                # Header
+                'report_subtitle':   'Entwicklung der körperlichen Leistungsfähigkeit',
+                'patient_id':        'Patienten-ID',
+                'sex_label':         'Geschlecht',
+                'date_label':        'Messung vom',
+                'sex_male':          'Männlich',
+                'sex_female':        'Weiblich',
+                # Intro page
+                'begruessung':       (
+                    "Dieser Bericht fasst die Ergebnisse der körperlichen Leistungsfähigkeit zusammen. "
+                    "Er dient dazu, individuelle Stärken aufzuzeigen und die Entwicklung über die Zeit zu dokumentieren."
+                ),
+                'intro_h1':          'Wie lese ich die Grafiken?',
+                'intro_grafik':      (
+                    "Die meisten Ergebnisse werden als Perzentilkurven dargestellt. Diese vergleichen die Leistung "
+                    "mit einer gesunden Referenzgruppe gleichen Alters und Geschlechts. Die x-Achse ist jeweils die Zeit (Alter), die y-Achse die Messung.<br/><br/>"
+                    "&#8226; Die mittlere, dicke Linie (P50) ist der exakte Durchschnitt.<br/>"
+                    "&#8226; Liegt ein Wert auf der P75-Linie, bedeutet das: 75% der Vergleichsgruppe sind schwächer, "
+                    "25% sind stärker. Diese Aussage gilt analog für die anderen Kurven.<br/><br/>"
+                    "Die roten Punkte zeigen den individuellen Verlauf. Der Startwert ist der Wert der ersten Messung. "
+                    "Der Report zu einem Messzeitpunkt hat auch alle früheren Messwerte in die Graphen eingezeichnet. "
+                    "Die ausgewiesene Differenz in den Tabellen ist immer vom letzten zum ersten Messtermin gerechnet."
+                ),
+                'intro_h2':          'Absolute vs. Relative Werte',
+                'intro_relativ':     (
+                    "Viele Kraft- und Ausdauerwerte werden zusätzlich ‘relativ’ angegeben (z.\u202FB. W/kg oder kg/kg). "
+                    "Hierbei wird die reine absolute Leistung durch das aktuelle Körpergewicht geteilt. "
+                    "Dies ermöglicht einen faireren Vergleich, da schwerere Personen oft absolut mehr Kraft haben, "
+                    "diese aber auch im Alltag bewegen müssen."
+                ),
+                'intro_h3':          'Hinweise zur Aussagekraft',
+                'intro_hinweis':     (
+                    "Bitte beachte: Messwerte unterliegen natürlichen Tagesform-Schwankungen. Zudem basieren die "
+                    "Kurven auf spezifischen Referenzgruppen (z.\u202FB. internationale Kohorten oder Nachwuchsathleten). "
+                    "Einige Referenzwerte können aufgrund kleiner Stichprobengrössen der zugrundeliegenden Studien ungenau sein. "
+                    "Kleinere Abweichungen bei der Testdurchführung können die Ergebnisse ebenfalls beeinflussen. "
+                    "Die Daten dienen der Orientierung und ersetzen keine medizinische Diagnose."
+                ),
+                # Maturity block
+                'mat_heading':       'Biologischer Reifegrad (Maturity)',
+                'mat_eff_age':       'Effektives Alter',
+                'mat_bio_age':       'Biologisches Alter',
+                'mat_diff_bio_eff':  'Diff. Biologisches Alter - Effektives Alter.',
+                'mat_diff_phv':      'Diff. zu PHV (Wachstumsschub)',
+                'mat_col_mzp':       'MZP',
+                'mat_col_date':      'Messdatum',
+                'mat_col_eff':       'Effektives Alter',
+                'mat_col_bio':       'Biologisches Alter',
+                'mat_next_default':  'Nächste Messung empfohlen: in ca. 10 Monaten',
+                'mat_next_text':     'Nächste Messung empfohlen: ca. {month} {year}',
+                'mat_info':          (
+                    "<i>Berechnet nach Mirwald et al. (2002), DOI: {doi}.<br/>"
+                    "Der Wachstumsschub (PHV) tritt bei Mädchen typischerweise um das 12. Lebensjahr "
+                    "und bei Jungen um das 14. Lebensjahr auf. "
+                    "Die Grafik zeigt, wie viele Jahre das Kind noch vom Schub entfernt ist (negativ) "
+                    "oder wie lange dieser bereits zurückliegt (positiv).</i>"
+                ),
+                'mat_warning':       (
+                    "Wichtiger methodischer Hinweis: Die Berechnung des biologischen Reifegrades basiert auf "
+                    "anthropometrischen Schätzformeln (Mirwald et al.). Da die individuelle biologische Entwicklung "
+                    "unregelmässig verläuft, sind diese Werte als Annäherung mit einer beträchtlichen "
+                    "Schätzunsicherheit zu verstehen und sollten mit Vorsicht interpretiert werden."
+                ),
+                'mat_years':         'J.',
+                # Impressum
+                'contact_heading':   'Kontakt &amp; Impressum',
+            },
+            'en': {
+                'start':             'Baseline',
+                'current':           'Current',
+                'diff':              'Change',
+                'anthropometrie':    'Anthropometry',
+                'kraft':             'Strength Measurements',
+                'spiro':             'Cardiopulmonary Exercise',
+                # Header
+                'report_subtitle':   'Development of Physical Performance',
+                'patient_id':        'Patient ID',
+                'sex_label':         'Sex',
+                'date_label':        'Measurement Date',
+                'sex_male':          'Male',
+                'sex_female':        'Female',
+                # Intro page
+                'begruessung':       (
+                    "This report summarises the results of physical fitness testing. "
+                    "It aims to highlight individual strengths and document development over time."
+                ),
+                'intro_h1':          'How to read the charts?',
+                'intro_grafik':      (
+                    "Most results are displayed as percentile curves, comparing performance "
+                    "with a healthy reference group of the same age and sex. The x-axis represents time (age), the y-axis the measurement.<br/><br/>"
+                    "&#8226; The thick middle line (P50) is the exact average.<br/>"
+                    "&#8226; A value on the P75 line means: 75% of the reference group are weaker, "
+                    "25% are stronger. This applies analogously to all other curves.<br/><br/>"
+                    "Red dots show the individual trend. The baseline is the value of the first measurement. "
+                    "Each report includes all previous measurements in the graphs. "
+                    "The reported difference in the tables is always calculated from the last to the first measurement."
+                ),
+                'intro_h2':          'Absolute vs. Relative Values',
+                'intro_relativ':     (
+                    "Many strength and endurance values are also reported ‘relatively’ (e.g. W/kg or kg/kg). "
+                    "Here, the absolute performance is divided by current body weight. "
+                    "This allows fairer comparisons, as heavier individuals often have more absolute strength "
+                    "but also need to move that body weight in daily life."
+                ),
+                'intro_h3':          'Notes on Interpretation',
+                'intro_hinweis':     (
+                    "Please note: measurements are subject to natural day-to-day variation. In addition, "
+                    "reference curves are based on specific populations (e.g. international cohorts or youth athletes). "
+                    "Some reference values may be imprecise due to small sample sizes in the underlying studies. "
+                    "Minor deviations in test execution can also affect results. "
+                    "Data are for guidance only and do not replace medical diagnosis."
+                ),
+                # Maturity block
+                'mat_heading':       'Biological Maturity',
+                'mat_eff_age':       'Chronological Age',
+                'mat_bio_age':       'Biological Age',
+                'mat_diff_bio_eff':  'Diff. Biological Age – Chronological Age',
+                'mat_diff_phv':      'Diff. to PHV (Growth Spurt)',
+                'mat_col_mzp':       'TP',
+                'mat_col_date':      'Measurement Date',
+                'mat_col_eff':       'Chronological Age',
+                'mat_col_bio':       'Biological Age',
+                'mat_next_default':  'Next measurement recommended: in approx. 10 months',
+                'mat_next_text':     'Next measurement recommended: approx. {month} {year}',
+                'mat_info':          (
+                    "<i>Calculated according to Mirwald et al. (2002), DOI: {doi}.<br/>"
+                    "The growth spurt (PHV) typically occurs around age 12 in girls "
+                    "and around age 14 in boys. "
+                    "The chart shows how many years the child is from the spurt (negative) "
+                    "or how long ago it occurred (positive).</i>"
+                ),
+                'mat_warning':       (
+                    "Important methodological note: The biological maturity estimate is based on "
+                    "anthropometric prediction equations (Mirwald et al.). Since individual biological "
+                    "development is irregular, these values should be understood as approximations with "
+                    "considerable estimation uncertainty and interpreted with caution."
+                ),
+                'mat_years':         'yrs.',
+                # Impressum
+                'contact_heading':   'Contact &amp; Imprint',
+            },
+        }
+        self._t = self._labels.get(lang, self._labels['de'])
+
+        # --- SEKTION-TITEL (sprachabhängig) ---
+        self._section_title_map = {
+            'Anthropometrie':  self._t['anthropometrie'],
+            'Kraftmessungen':  self._t['kraft'],
+            'Spiroergometrie': self._t['spiro'],
+        }
+
         # --- NEUE STRUKTUR: (Name, Key, Einheit, Plot-Name, Erklärung, Referenz-Daten, is_dummy) ---
-        self.report_structure = [
-            ("Anthropometrie", [
-                ("Körpergrösse", "groesse", "cm", "groesse_ref.png", 
-                 "Zeigt das Längenwachstum im Vergleich zur altersentsprechenden Norm.", 
-                 "Ref: Deutschland, gesunde Kinder (KiGGS) | DOI: 10.1007/s001120170107", False),
-                 
-                ("Körpergewicht", "gewicht", "kg", "gewicht_ref.png", 
-                 "Zeigt die Gewichtsentwicklung im Vergleich zur altersentsprechenden Norm.", 
-                 "Ref: Deutschland, gesunde Kinder (KiGGS) | DOI: 10.1007/s001120170107", False)
-            ]),
-            ("Kraftmessungen", [
-                ("Max. Greifkraft (Absolut)", "handkraft", "kg", "handkraft_ref.png", 
-                 "Maß für die allgemeine Kraft des Oberkörpers (gezeigt für die dominante Hand). Methodischer Hinweis: Messung im Sitzen (Ellenbogen 90° flektiert, Unterarm neutral) mittels digitalem Jamar-Dynamometer (Griffposition 2).", 
-                 "Ref: Bohannon et al. (2017), Pediatric Physical Therapy. | Populationsbasierte Normwerte aus dem NIH Toolbox Projekt (n = 2.706).", False),
-                 
-                ("Greifkraft (Relativ)", "handkraft_rel", "kg/kg", "handkraft_rel_ref.png", 
-                 "Maximale Handkraft im Verhältnis zum Körpergewicht. Methodischer Hinweis: Messung im Sitzen (Ellenbogen 90° flektiert, Unterarm neutral) mittels digitalem Jamar-Dynamometer (Griffposition 2).", 
-                 "Ref: Bohannon et al. (2017), Pediatric Physical Therapy. | Populationsbasierte Normwerte aus dem NIH Toolbox Projekt (n = 2.706).", False),
-                 
-                ("Sprunghöhe", "sprung", "cm", "sprung_ref.png", 
-                 "Zeigt die Explosivität, Beinkraft und koordinative Schnellkraft.", 
-                 "Ref: Tschechien, gesunde Kinder und Jugendliche | DOI: 10.1016/j.bone.2013.06.012", False),
-                 
-                ("Sprungkraft (Relativ)", "pmax_rel", "W/kg", "pmax_rel_ref.png", 
-                 "Zeigt die pure maximale mechanische Leistung der Beinmuskulatur pro kg Körpergewicht.", 
-                 "Ref: Tschechien, gesunde Kinder und Jugendliche | DOI: 10.1016/j.bone.2013.06.012", False),
-                 
-                ("Isom. Kreuzheben (Absolut)", "kreuzheben", "kg", "kreuzheben_ref.png", 
-                 "Misst die statische Maximalkraft des gesamten Körpers. Achtung: Verglichen mit NachwuchsathletInnen!", 
-                 "Ref: Morris et al. (2020) Jungs & Salter et al. (2025) Mädchen (Athleten-Norm!)", False),
-                 
-                ("Ganzkörperkraft (Relativ)", "mtp_rel", "kg/kg", "mtp_rel_ref.png", 
-                 "Statische Maximalkraft des Körpers im Verhältnis zum Körpergewicht. Achtung: Verglichen mit NachwuchsathletInnen!", 
-                 "Ref: Morris et al. (2020) Jungs & Salter et al. (2025) Mädchen (Athleten-Norm!)", False),
-                 
-                ("Max. Beinstreckkraft (Absolut)", "beinstrecker", "Nm", "beinstrecker_ref.png", 
-                 "Zeigt die isolierte, absolute Kraft der vorderen Oberschenkelmuskulatur (Drehmoment).", 
-                 "Ref: Kanada, gesunde Kinder und Jugendliche | Hébert et al. (2015)", False),
-                 
-                ("Beinkraft (Relativ)", "leg_ext_rel", "Nm/kg", "leg_ext_rel_ref.png", 
-                 "Isolierte Oberschenkelkraft im Verhältnis zum Körpergewicht.", 
-                 "Ref: Kanada, gesunde Kinder und Jugendliche | Hébert et al. (2015)", False)
-            ]),
-            ("Spiroergometrie", [
-                ("Ausdauer (VO2max)", "vo2max", "mL/kg/min", "vo2_ref.png", 
-                 "Die maximale Sauerstoffaufnahme ist der Goldstandard für die Herz-Kreislauf-Fitness.", 
-                 "Ref: Niederlande, gesunde Kinder und Jugendliche (SentrySuite) | DOI: 10.1513/AnnalsATS.201611-912FR", False),
-                 
-                ("Max. Leistung", "leistung", "Watt", "leistung_abs_ref.png", 
-                 "Maximale mechanische Ausdauer-Leistung auf dem Fahrrad-Ergometer.", 
-                 "Ref: Niederlande, gesunde Kinder und Jugendliche (SentrySuite) | DOI: 10.1513/AnnalsATS.201611-912FR", False)
-            ])
-        ]
+        _rs = {
+            'de': [
+                ("Anthropometrie", [
+                    ("Körpergrösse", "groesse", "cm", "groesse_abs.png",
+                     "Zeigt das Längenwachstum im Vergleich zur altersentsprechenden Norm.",
+                     "Ref: Deutschland, gesunde Kinder (KiGGS) | DOI: 10.1007/s001120170107", False),
+                    ("Körpergewicht", "gewicht", "kg", "gewicht_abs.png",
+                     "Zeigt die Gewichtsentwicklung im Vergleich zur altersentsprechenden Norm.",
+                     "Ref: Deutschland, gesunde Kinder (KiGGS) | DOI: 10.1007/s001120170107", False)
+                ]),
+                ("Kraftmessungen", [
+                    ("Max. Greifkraft (Absolut)", "handkraft", "kg", "handkraft_abs.png",
+                     "Maß für die allgemeine Kraft des Oberkörpers (gezeigt für die dominante Hand). Methodischer Hinweis: Messung der maximalen isometrischen Kraft mittels standardisiertem Hand-Dynamometer.",
+                     "Ref: Bohannon et al. (2017), Pediatric Physical Therapy. | Populationsbasierte Normwerte aus dem NIH Toolbox Projekt (n = 2.706).", False),
+                    ("Greifkraft (Relativ)", "handkraft_rel", "kg/kg", "handkraft_rel.png",
+                     "Maximale Handkraft im Verhältnis zum Körpergewicht. Methodischer Hinweis: Messung der maximalen isometrischen Kraft mittels standardisiertem Hand-Dynamometer.",
+                     "Ref: Bohannon et al. (2017), Pediatric Physical Therapy. | Populationsbasierte Normwerte aus dem NIH Toolbox Projekt (n = 2.706).", False),
+                    ("Sprunghöhe", "sprung", "cm", "sprung_abs.png",
+                     "Zeigt die Explosivität, Beinkraft und koordinative Schnellkraft.",
+                     "Ref: Tschechien, gesunde Kinder und Jugendliche | DOI: 10.1016/j.bone.2013.06.012", False),
+                    ("Max. Sprungpower (Relativ)", "sprung_rel", "W/kg", "sprung_rel.png",
+                     "Zeigt die maximale mechanische Leistung der Beinmuskulatur (Power) pro kg Körpergewicht während des Sprungs.",
+                     "Ref: Tschechien, gesunde Kinder und Jugendliche | DOI: 10.1016/j.bone.2013.06.012", False),
+                    ("Isom. Kreuzheben (Absolut)", "kreuzheben", "kg", "kreuzheben_abs.png",
+                     "Misst die statische Maximalkraft des gesamten Körpers. Achtung: Verglichen mit NachwuchsathletInnen!",
+                     "Ref: Morris et al. (2020) Jungs & Salter et al. (2025) Mädchen (Athleten-Norm!)", False),
+                    ("Ganzkörperkraft (Relativ)", "kreuzheben_rel", "kg/kg", "kreuzheben_rel.png",
+                     "Statische Maximalkraft des Körpers im Verhältnis zum Körpergewicht. Achtung: Verglichen mit NachwuchsathletInnen!",
+                     "Ref: Morris et al. (2020) Jungs & Salter et al. (2025) Mädchen (Athleten-Norm!)", False),
+                    ("Max. Beinstreckkraft (Absolut)", "beinstrecker", "Nm", "beinstrecker_abs.png",
+                     "Zeigt die isolierte, absolute Kraft der vorderen Oberschenkelmuskulatur (Drehmoment).",
+                     "Ref: Kanada, gesunde Kinder und Jugendliche | Hébert et al. (2015)", False),
+                    ("Beinkraft (Relativ)", "beinstrecker_rel", "Nm/kg", "beinstrecker_rel.png",
+                     "Isolierte Oberschenkelkraft im Verhältnis zum Körpergewicht.",
+                     "Ref: Kanada, gesunde Kinder und Jugendliche | Hébert et al. (2015)", False)
+                ]),
+                ("Spiroergometrie", [
+                    ("Ausdauer (VO2max)", "vo2max", "mL/kg/min", "vo2max_abs.png",
+                     "Die maximale Sauerstoffaufnahme ist der Goldstandard für die Herz-Kreislauf-Fitness.",
+                     "Ref: Niederlande, gesunde Kinder und Jugendliche (SentrySuite) | DOI: 10.1513/AnnalsATS.201611-912FR", False),
+                    ("Max. Leistung", "leistung", "Watt", "leistung_abs.png",
+                     "Maximale mechanische Ausdauer-Leistung auf dem Fahrrad-Ergometer.",
+                     "Ref: Niederlande, gesunde Kinder und Jugendliche (SentrySuite) | DOI: 10.1513/AnnalsATS.201611-912FR", False)
+                ])
+            ],
+            'en': [
+                ("Anthropometrie", [
+                    ("Body Height", "groesse", "cm", "groesse_abs.png",
+                     "Shows height development compared to the age-appropriate norm.",
+                     "Ref: Germany, healthy children (KiGGS) | DOI: 10.1007/s001120170107", False),
+                    ("Body Weight", "gewicht", "kg", "gewicht_abs.png",
+                     "Shows weight development compared to the age-appropriate norm.",
+                     "Ref: Germany, healthy children (KiGGS) | DOI: 10.1007/s001120170107", False)
+                ]),
+                ("Kraftmessungen", [
+                    ("Max. Grip Strength (Absolute)", "handkraft", "kg", "handkraft_abs.png",
+                     "Indicator of general upper-body strength (dominant hand). Methodological note: Maximum isometric force measured with a standardised hand dynamometer.",
+                     "Ref: Bohannon et al. (2017), Pediatric Physical Therapy. | Population-based norms from the NIH Toolbox Project (n = 2,706).", False),
+                    ("Grip Strength (Relative)", "handkraft_rel", "kg/kg", "handkraft_rel.png",
+                     "Maximum grip strength relative to body weight. Methodological note: Maximum isometric force measured with a standardised hand dynamometer.",
+                     "Ref: Bohannon et al. (2017), Pediatric Physical Therapy. | Population-based norms from the NIH Toolbox Project (n = 2,706).", False),
+                    ("Jump Height", "sprung", "cm", "sprung_abs.png",
+                     "Reflects explosive power, leg strength and coordinative speed-strength.",
+                     "Ref: Czech Republic, healthy children and adolescents | DOI: 10.1016/j.bone.2013.06.012", False),
+                    ("Max. Jump Power (Relative)", "sprung_rel", "W/kg", "sprung_rel.png",
+                     "Shows the maximum mechanical power output of the leg muscles (power) per kg of body weight during the jump.",
+                     "Ref: Czech Republic, healthy children and adolescents | DOI: 10.1016/j.bone.2013.06.012", False),
+                    ("Isom. Deadlift (Absolute)", "kreuzheben", "kg", "kreuzheben_abs.png",
+                     "Measures static whole-body strength. Note: Compared with youth athletes!",
+                     "Ref: Morris et al. (2020) Boys & Salter et al. (2025) Girls (Athlete Norm!)", False),
+                    ("Whole-Body Strength (Relative)", "kreuzheben_rel", "kg/kg", "kreuzheben_rel.png",
+                     "Static whole-body strength relative to body weight. Note: Compared with youth athletes!",
+                     "Ref: Morris et al. (2020) Boys & Salter et al. (2025) Girls (Athlete Norm!)", False),
+                    ("Max. Leg Extension Strength (Absolute)", "beinstrecker", "Nm", "beinstrecker_abs.png",
+                     "Shows isolated absolute strength of the quadriceps (torque).",
+                     "Ref: Canada, healthy children and adolescents | Hébert et al. (2015)", False),
+                    ("Leg Strength (Relative)", "beinstrecker_rel", "Nm/kg", "beinstrecker_rel.png",
+                     "Isolated quadriceps strength relative to body weight.",
+                     "Ref: Canada, healthy children and adolescents | Hébert et al. (2015)", False)
+                ]),
+                ("Spiroergometrie", [
+                    ("Cardiorespiratory Fitness (VO2max)", "vo2max", "mL/kg/min", "vo2max_abs.png",
+                     "Maximal oxygen uptake is the gold standard for cardiorespiratory fitness.",
+                     "Ref: Netherlands, healthy children and adolescents (SentrySuite) | DOI: 10.1513/AnnalsATS.201611-912FR", False),
+                    ("Max. Power Output", "leistung", "Watts", "leistung_abs.png",
+                     "Maximum mechanical endurance power output on the cycle ergometer.",
+                     "Ref: Netherlands, healthy children and adolescents (SentrySuite) | DOI: 10.1513/AnnalsATS.201611-912FR", False)
+                ])
+            ]
+        }
+        self.report_structure = _rs.get(lang, _rs['de'])
 
     def _create_custom_styles(self):
         """Definiert Styles basierend auf dem CD der Uni Basel."""
@@ -89,14 +288,15 @@ class ReportGenerator:
         self.styles.add(ParagraphStyle(
             name='ReportSubTitle', parent=self.styles['Normal'], 
             fontName='Helvetica', fontSize=12, leading=16, 
-            textColor=UNIBAS_ANTHRAZIT_HELL, alignment=TA_LEFT, spaceAfter=15
+            textColor=UNIBAS_ANTHRAZIT_HELL, alignment=TA_LEFT, spaceAfter=5
         ))
         
         self.styles.add(ParagraphStyle(
             name='SectionHeader', parent=self.styles['Heading2'], 
             fontName='Times-Bold', fontSize=14, leading=16, 
             textColor=UNIBAS_ANTHRAZIT, backColor=UNIBAS_MINT, 
-            borderPadding=(6, 4, 6, 4), alignment=TA_LEFT, spaceBefore=5, spaceAfter=10
+            borderPadding=(6, 4, 6, 4), alignment=TA_LEFT, spaceBefore=5, spaceAfter=10,
+            keepWithNext=True
         ))
         
         self.styles.add(ParagraphStyle(name='MetricLabel', parent=self.styles['Normal'], fontName='Helvetica-Bold', fontSize=11, leading=14, textColor=UNIBAS_ANTHRAZIT))
@@ -107,14 +307,34 @@ class ReportGenerator:
         self.styles.add(ParagraphStyle(name='ExplanationSmall', parent=self.styles['Normal'], fontName='Helvetica-Oblique', fontSize=9, leading=12, textColor=UNIBAS_ANTHRAZIT, spaceBefore=5))
         self.styles.add(ParagraphStyle(name='ReferenceNormal', parent=self.styles['Normal'], fontName='Helvetica', fontSize=7.5, leading=10, textColor=UNIBAS_ANTHRAZIT_HELL, spaceBefore=2))
         self.styles.add(ParagraphStyle(name='ReferenceDummy', parent=self.styles['Normal'], fontName='Helvetica-Bold', fontSize=7.5, leading=10, textColor=UNIBAS_ROT, spaceBefore=2))
+        self.styles.add(ParagraphStyle(name='MaturityWarning', parent=self.styles['Normal'], fontName='Helvetica-BoldOblique', fontSize=8.5, leading=12, textColor=UNIBAS_ROT, spaceBefore=6))
         
         # --- STYLE FÜR IMPRESSUM ---
         self.styles.add(ParagraphStyle(name='Impressum', parent=self.styles['Normal'], fontName='Helvetica', fontSize=8, leading=11, textColor=UNIBAS_ANTHRAZIT_HELL))
 
+        # --- STYLES FÜR INTRO-SEITE ---
+        self.styles.add(ParagraphStyle(
+            name='IntroHeader', parent=self.styles['Heading2'], 
+            fontName='Times-Bold', fontSize=14, leading=16, 
+            textColor=UNIBAS_ANTHRAZIT, alignment=TA_LEFT, spaceBefore=5, spaceAfter=10,
+            keepWithNext=True
+        ))
+        self.styles.add(ParagraphStyle(
+            name='IntroBegruessung', parent=self.styles['Normal'],
+            fontName='Helvetica', fontSize=10, leading=15,
+            textColor=UNIBAS_ANTHRAZIT, spaceBefore=8, spaceAfter=12
+        ))
+        self.styles.add(ParagraphStyle(
+            name='IntroBody', parent=self.styles['Normal'],
+            fontName='Helvetica', fontSize=9.5, leading=14,
+            textColor=UNIBAS_ANTHRAZIT, spaceBefore=5, spaceAfter=8
+        ))
+
     def _create_header(self, patient_info):
         elements = []
         title = Paragraph("<para align=center>DECADE Report</para>", self.styles['ReportTitle'])
-        subtitle = Paragraph("<para align=center>Entwicklung der körperlichen Leistungsfähigkeit</para>", self.styles['ReportSubTitle'])
+        subtitle_text = self._t['report_subtitle']
+        subtitle = Paragraph(f"<para align=center>{subtitle_text}</para>", self.styles['ReportSubTitle'])
         
         # --- LOGOS IM DATA ORDNER SUCHEN ---
         script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -144,9 +364,9 @@ class ReportGenerator:
         p_id = patient_info.get('ID', '-')
         p_date = patient_info.get('Messdatum', '-')
         p_sex_raw = patient_info.get('sex', '-')
-        p_sex = "Weiblich" if p_sex_raw == 'girls' else "Männlich" if p_sex_raw == 'boys' else "-"
+        p_sex = self._t['sex_female'] if p_sex_raw == 'girls' else self._t['sex_male'] if p_sex_raw == 'boys' else "-"
 
-        p_data = [[f"Patienten-ID: {p_id}", f"Geschlecht: {p_sex}", f"Messung vom: {p_date}"]]
+        p_data = [[f"{self._t['patient_id']}: {p_id}", f"{self._t['sex_label']}: {p_sex}", f"{self._t['date_label']}: {p_date}"]]
         p_table = Table(p_data, colWidths=[6*cm, 6*cm, 6*cm])
         p_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, -1), UNIBAS_MINT_HELL),
@@ -160,13 +380,14 @@ class ReportGenerator:
         ]))
         
         elements.append(p_table)
-        elements.append(Spacer(1, 1*cm))
+        elements.append(Spacer(1, 0.5*cm))
         return elements
 
     def _create_metric_table(self, label, metric_data, unit=""):
         if not metric_data:
             metric_data = {'pre': '-', 'post': '-', 'diff': None}
 
+        t = self._t  # language labels
         old_val = metric_data.get('pre', '-')
         new_val = metric_data.get('post', '-')
         change_pct = metric_data.get('diff', None)
@@ -186,20 +407,20 @@ class ReportGenerator:
 
         data = [[
             Paragraph(label, self.styles['MetricLabel']),
-            Paragraph(f"Start: {old_val} {unit}", self.styles['MetricValue']),
-            Paragraph(f"Aktuell: <b>{new_val} {unit}</b>", self.styles['MetricValue']),
-            Paragraph(f"Diff: {change_str}", style_change)
+            Paragraph(f"{t['start']}: {old_val} {unit}", self.styles['MetricValue']),
+            Paragraph(f"{t['current']}: <b>{new_val} {unit}</b>", self.styles['MetricValue']),
+            Paragraph(f"{t['diff']}: {change_str}", style_change)
         ]]
         
-        t = Table(data, colWidths=[6.5*cm, 4*cm, 4*cm, 3.5*cm])
-        t.setStyle(TableStyle([
+        tbl = Table(data, colWidths=[6.5*cm, 4*cm, 4*cm, 3.5*cm])
+        tbl.setStyle(TableStyle([
             ('BACKGROUND', (0,0), (-1,-1), colors.whitesmoke),
             ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
             ('BOTTOMPADDING', (0,0), (-1,-1), 6),
             ('TOPPADDING', (0,0), (-1,-1), 6),
             ('LINEBELOW', (0,0), (-1,-1), 0.5, UNIBAS_MINT_HELL)
         ]))
-        return t
+        return tbl
 
     def _get_german_month(self, month_num):
         months = ["Januar", "Februar", "März", "April", "Mai", "Juni", 
@@ -218,18 +439,17 @@ class ReportGenerator:
         latest = history[-1]
         chron_age = latest['chron_age']
         dev_age = bio_age - chron_age
+        t = self._t  # language labels
 
-        elements.append(Paragraph("Biologischer Reifegrad (Maturity)", self.styles['SectionHeader']))
-        
         # 1. Zusammenfassung (Farbig) - 2x2 Layout für mehr Platz
         summary_data = [
             [
-                Paragraph(f"Effektives Alter: <b>{chron_age:.1f} J.</b>", self.styles['MetricLabel']),
-                Paragraph(f"Biologisches Alter: <b>{bio_age:.1f} J.</b>", self.styles['MetricLabel'])
+                Paragraph(f"{t['mat_eff_age']}: <b>{chron_age:.1f} {t['mat_years']}</b>", self.styles['MetricLabel']),
+                Paragraph(f"{t['mat_bio_age']}: <b>{bio_age:.1f} {t['mat_years']}</b>", self.styles['MetricLabel'])
             ],
             [
-                Paragraph(f"Diff. Biologisches Alter - Effektives Alter.: <b>{dev_age:+.1f} J.</b>", self.styles['MetricLabel']),
-                Paragraph(f"Diff. zu PHV (Wachstumsschub): <b>{offset:+.1f} J.</b>", self.styles['MetricLabel'])
+                Paragraph(f"{t['mat_diff_bio_eff']}: <b>{dev_age:+.1f} {t['mat_years']}</b>", self.styles['MetricLabel']),
+                Paragraph(f"{t['mat_diff_phv']}: <b>{offset:+.1f} {t['mat_years']}</b>", self.styles['MetricLabel'])
             ]
         ]
         t_sum = Table(summary_data, colWidths=[9*cm, 9*cm])
@@ -240,11 +460,15 @@ class ReportGenerator:
             ('TOPPADDING', (0,0), (-1,-1), 6),
             ('GRID', (0,0), (-1,-1), 0.5, UNIBAS_MINT_HELL),
         ]))
-        elements.append(t_sum)
+        
+        elements.append(KeepTogether([
+            Paragraph(t['mat_heading'], self.styles['SectionHeader']),
+            t_sum
+        ]))
         elements.append(Spacer(1, 0.3*cm))
 
         # 2. Historie-Tabelle
-        header = ["MZP", "Messdatum", "Effektives Alter", "Biologisches Alter"]
+        header = [t['mat_col_mzp'], t['mat_col_date'], t['mat_col_eff'], t['mat_col_bio']]
         table_rows = [header]
         
         for i, entry in enumerate(history):
@@ -258,24 +482,26 @@ class ReportGenerator:
             table_rows.append([
                 f"T{i+1}",
                 date_str,
-                f"{entry['chron_age']:.1f} J.",
-                f"{entry['bio_age']:.1f} J."
+                f"{entry['chron_age']:.1f} {t['mat_years']}",
+                f"{entry['bio_age']:.1f} {t['mat_years']}"
             ])
 
         # Nächste Messung als extra Zeile
-        next_text = "Nächste Messung empfohlen: in ca. 10 Monaten"
+        next_text = t['mat_next_default']
         d_str = latest.get('date')
         if d_str and str(d_str) not in ('-', 'nan', 'None'):
             try:
                 import pandas as pd
                 last_date_dt = pd.to_datetime(d_str, errors='coerce')
-                
                 if pd.notna(last_date_dt):
-                    # 10 Monate später
                     next_date = last_date_dt + timedelta(days=304)
-                    month_name = self._get_german_month(next_date.month)
-                    next_text = f"Nächste Messung empfohlen: ca. {month_name} {next_date.year}"
-            except Exception as e:
+                    if self.lang == 'en':
+                        import calendar
+                        month_name = calendar.month_name[next_date.month]
+                    else:
+                        month_name = self._get_german_month(next_date.month)
+                    next_text = t['mat_next_text'].format(month=month_name, year=next_date.year)
+            except Exception:
                 pass
         
         table_rows.append([next_text, "", "", ""])
@@ -314,99 +540,161 @@ class ReportGenerator:
             elements.append(img)
             
         doi_link = '<a href="https://doi.org/10.1249/00005768-200204000-00020" color="blue">10.1249/00005768-200204000-00020</a>'
-        info_text = f"""
-        <i>Berechnet nach Mirwald et al. (2002), DOI: {doi_link}.<br/>
-        Der Wachstumsschub (PHV) tritt bei Mädchen typischerweise um das 12. Lebensjahr und bei Jungen um das 14. Lebensjahr auf. 
-        Die Grafik zeigt, wie viele Jahre das Kind noch vom Schub entfernt ist (negativ) oder wie lange dieser bereits zurückliegt (positiv).</i>
-        """
+        info_text = t['mat_info'].format(doi=doi_link)
         elements.append(Paragraph(info_text, self.styles['ExplanationSmall']))
-        elements.append(Spacer(1, 0.5*cm))
+        elements.append(Paragraph(t['mat_warning'], self.styles['MaturityWarning']))
+        elements.append(Spacer(1, 0.2*cm))
+        return elements
+
+    def _build_plot_with_icon(self, metric_key, plot_path):
+        """Gibt ein Table-Element zurück: links das Icon (falls vorhanden), rechts der Graph."""
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        icon_path = os.path.join(script_dir, '..', 'data', 'icons', f'{metric_key}.png')
+
+        graph_img = Image(plot_path, width=12*cm, height=7.5*cm)
+
+        if os.path.exists(icon_path):
+            icon_img = Image(icon_path, width=2.5*cm, height=2.5*cm, kind='proportional')
+            row = [[icon_img, graph_img]]
+            tbl = Table(row, colWidths=[3*cm, 15*cm])
+            tbl.setStyle(TableStyle([
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('ALIGN',  (0, 0), (0, 0),  'CENTER'),
+                ('LEFTPADDING',  (0, 0), (-1, -1), 0),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+            ]))
+            return tbl
+        else:
+            return graph_img
+
+    def _create_impressum(self):
+        """Erstellt den Impressum-Block als Liste von Flowables."""
+        elements = []
+        elements.append(Spacer(1, 0.8*cm))
+        elements.append(Paragraph(self._t['contact_heading'], self.styles['SectionHeader']))
+
+        impressum_text_left = """<br/>
+        <b>DECADE Studie:</b> <a href="https://decade.dsbg.unibas.ch/de/" color="blue">https://decade.dsbg.unibas.ch/de/</a><br/>
+        <b>Leitung:</b> Romina Ledergerber &amp; Ralf Roth<br/>
+        <b>Kontakt:</b> <a href="mailto:romina.ledergerber@unibas.ch" color="blue">romina.ledergerber@unibas.ch</a> | +41 61 207 47 73
+        """
+        impressum_text_right = """<br/>
+        <b>Adresse:</b><br/>
+        Departement für Sport, Bewegung und Gesundheit<br/>
+        Grosse Allee 6, 4052 Basel, Switzerland
+        """
+
+        p_left  = Paragraph(impressum_text_left,  self.styles['Impressum'])
+        p_right = Paragraph(impressum_text_right, self.styles['Impressum'])
+
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        logo_path  = os.path.join(script_dir, '..', 'data', 'decade_logo.jpg')
+        if not os.path.exists(logo_path):
+            logo_path = os.path.join(script_dir, '..', 'data', 'decade_logo.png')
+
+        img_impressum = ""
+        if os.path.exists(logo_path):
+            img_impressum = Image(logo_path, width=4*cm, height=1.6*cm, kind='proportional')
+
+        table = Table([[p_left, p_right, img_impressum]], colWidths=[8*cm, 6.5*cm, 4*cm])
+        table.setStyle(TableStyle([
+            ('VALIGN',       (0, 0), (-1, -1), 'TOP'),
+            ('ALIGN',        (2, 0), (2, 0),   'RIGHT'),
+            ('LEFTPADDING',  (0, 0), (-1, -1), 0),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+        ]))
+        elements.append(table)
+        return elements
+
+    def _create_intro_page(self, patient_meta):
+        """Erstellt die Einführungsseite (Seite 1) des Reports."""
+        elements = []
+
+        # 1. Header (Logos + Patienten-Tabelle)
+        elements.extend(self._create_header(patient_meta))
+
+        # 2. Begrüssungstext
+        elements.append(Paragraph(self._t['begruessung'], self.styles['IntroBegruessung']))
+
+        # 3. Abschnitt: Wie lese ich die Grafiken?
+        elements.append(Paragraph(self._t['intro_h1'], self.styles['IntroHeader']))
+        elements.append(Paragraph(self._t['intro_grafik'], self.styles['IntroBody']))
+
+        # Platzhalter-Bild für das Grafik-Guide
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        guide_img_path = os.path.join(script_dir, '..', 'data', 'report_guide.png')
+        if os.path.exists(guide_img_path):
+            elements.append(Spacer(1, 0.3*cm))
+            elements.append(Image(guide_img_path, width=12*cm, height=7*cm))
+            elements.append(Spacer(1, 0.3*cm))
+
+        # 4. Abschnitt: Absolute vs. Relative Werte
+        elements.append(Paragraph(self._t['intro_h2'], self.styles['IntroHeader']))
+        elements.append(Paragraph(self._t['intro_relativ'], self.styles['IntroBody']))
+
+        # 5. Abschnitt: Hinweise zur Aussagekraft
+        elements.append(Paragraph(self._t['intro_h3'], self.styles['IntroHeader']))
+        elements.append(Paragraph(self._t['intro_hinweis'], self.styles['IntroBody']))
+
         return elements
 
     def build_report(self, metrics, plot_files):
-        doc = SimpleDocTemplate(self.out_file, pagesize=A4, rightMargin=1.5*cm, leftMargin=1.5*cm, topMargin=1.5*cm, bottomMargin=1.5*cm)
+        doc = SimpleDocTemplate(
+            self.out_file, pagesize=A4,
+            rightMargin=1.5*cm, leftMargin=1.5*cm,
+            topMargin=1.5*cm, bottomMargin=1.5*cm
+        )
         story = []
-        
+
         patient_meta = metrics.get("meta", {})
-        story.extend(self._create_header(patient_meta))
+
+        # --- SEITE 1: Einführungsseite ---
+        story.extend(self._create_intro_page(patient_meta))
+        story.append(PageBreak())
 
         plot_dict = {os.path.basename(p): p for p in plot_files}
 
         for i, (section_title, metric_list) in enumerate(self.report_structure):
             if i > 0:
                 story.append(PageBreak())
-                
-            story.append(Paragraph(section_title, self.styles['SectionHeader']))
-            
-            # NEU: Erklärung, Referenz und is_dummy beim Entpacken der Liste mit auslesen!
+
+            # Sprachabhängigen Sektionstitel ausgeben
+            display_section = self._section_title_map.get(section_title, section_title)
+            story.append(Paragraph(display_section, self.styles['SectionHeader']))
+
+            # Erklärung, Referenz und is_dummy beim Entpacken auslesen
             for display_name, metric_key, unit, expected_plot_name, explanation, reference, is_dummy in metric_list:
                 metric_data = metrics.get(metric_key)
                 block = []
-                
+
                 # 1. Die Wertetabelle
                 block.append(self._create_metric_table(display_name, metric_data, unit))
-                
-                # 2. Das Bild (falls vorhanden)
+
+                # 2. Das Bild (falls vorhanden) — mit optionalem Icon links daneben
                 if expected_plot_name:
                     block.append(Spacer(1, 0.2*cm))
                     plot_path = plot_dict.get(expected_plot_name)
                     if plot_path and os.path.exists(plot_path):
-                        img = Image(plot_path, width=12*cm, height=7.5*cm)
-                        block.append(img)
-                        
+                        block.append(self._build_plot_with_icon(metric_key, plot_path))
+
                 # 3. Die Erklärung unter der Tabelle/dem Bild
                 if explanation:
                     block.append(Paragraph(explanation, self.styles['ExplanationSmall']))
-                    
+
                 # 4. Die Referenz-Infos (Mit Schalter für Rote Dummy-Daten)
                 if reference:
                     ref_style = self.styles['ReferenceDummy'] if is_dummy else self.styles['ReferenceNormal']
                     block.append(Paragraph(reference, ref_style))
-                
-                block.append(Spacer(1, 0.8*cm)) 
+
+                block.append(Spacer(1, 0.4*cm))
                 story.append(KeepTogether(block))
 
-            # NEU: Maturity Block nach der Anthropometrie (erste Sektion)
+            # Maturity Block nach der Anthropometrie (erste Sektion)
             if section_title == "Anthropometrie":
+                story.append(PageBreak())
                 story.extend(self._create_maturity_block(patient_meta, plot_dict))
 
         # --- IMPRESSUM AM ENDE ---
-        impressum_block = []
-        impressum_block.append(Spacer(1, 1*cm))
-        impressum_block.append(Paragraph("Kontakt & Impressum", self.styles['SectionHeader']))
-        
-        impressum_text_left = """<br/>
-        <b>DECADE Studie:</b> <a href="https://decade.dsbg.unibas.ch/de/" color="blue">https://decade.dsbg.unibas.ch/de/</a><br/>
-        <b>Leitung:</b> Romina Ledergerber & Ralf Roth<br/>
-        <b>Kontakt:</b> <a href="mailto:romina.ledergerber@unibas.ch" color="blue">romina.ledergerber@unibas.ch</a> | +41 61 207 47 73
-        """
-        
-        impressum_text_right = """<br/>
-        <b>Adresse:</b><br/>
-        Departement für Sport, Bewegung und Gesundheit<br/>
-        Grosse Allee 6, 4052 Basel, Switzerland
-        """
-        
-        p_left = Paragraph(impressum_text_left, self.styles['Impressum'])
-        p_right = Paragraph(impressum_text_right, self.styles['Impressum'])
-        
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        logo_path = os.path.join(script_dir, '..', 'data', 'decade_logo.jpg')
-        if not os.path.exists(logo_path):
-            logo_path = os.path.join(script_dir, '..', 'data', 'decade_logo.png')
-        
-        img_impressum = ""
-        if os.path.exists(logo_path):
-            img_impressum = Image(logo_path, width=4*cm, height=1.6*cm, kind='proportional')
-        
-        table = Table([[p_left, p_right, img_impressum]], colWidths=[8*cm, 6.5*cm, 4*cm])
-        table.setStyle(TableStyle([
-            ('VALIGN', (0,0), (-1,-1), 'TOP'),
-            ('ALIGN', (2,0), (2,0), 'RIGHT'),
-            ('LEFTPADDING', (0,0), (-1,-1), 0),
-            ('RIGHTPADDING', (0,0), (-1,-1), 0),
-        ]))
-        impressum_block.append(table)
-        story.append(KeepTogether(impressum_block))
+        story.append(KeepTogether(self._create_impressum()))
 
         doc.build(story)

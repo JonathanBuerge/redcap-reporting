@@ -8,7 +8,8 @@ from reference_data import (
 )
 
 class Visualizer:
-    def __init__(self):
+    def __init__(self, lang: str = 'de'):
+        self.lang = lang
         self.colors = {
             'P97': '#cccccc', 'P90': '#cccccc', 'P75': '#888888',
             'P50': 'black',
@@ -18,6 +19,95 @@ class Visualizer:
             'P97': 1.88, 'P90': 1.28, 'P75': 0.675, 'P50': 0.0,
             'P25': -0.675, 'P10': -1.28, 'P3': -1.88
         }
+        _labels = {
+            'de': {
+                'girls':            'Mädchen',
+                'boys':             'Jungs',
+                'age_axis':         'Alter [Jahre]',
+                'you':              'Du',
+                'your_maturity':    'Dein Reifegrad',
+                # plot titles
+                'sprung_title':         'Sprunghöhe',
+                'sprung_ylabel':        'Sprunghöhe (cm)',
+                'sprung_rel_title':     'Max. Sprungpower',
+                'sprung_rel_ylabel':    'Power (W/kg)',
+                'vo2max_title':         'Ausdauer (VO2max)',
+                'vo2max_ylabel':        'Sauerstoff (mL/kg/min)',
+                'leistung_title':       'Max. Leistung Ergometer',
+                'leistung_ylabel':      'Leistung (Watt)',
+                'kreuzheben_rel_title': 'Ganzkörperkraft (Relativ) [Athleten-Norm!]',
+                'kreuzheben_rel_ylabel':'Kraft / Gewicht (kg/kg)',
+                'beinstrecker_title':   'Max. Beinstreckkraft',
+                'beinstrecker_ylabel':  'Kraft (Nm)',
+                'beinstrecker_rel_title':  'Beinkraft Relativ',
+                'beinstrecker_rel_ylabel': 'Kraft (Nm/kg)',
+                'handkraft_title':      'Maximale Greifkraft der dominanten Hand (kg)',
+                'handkraft_ylabel':     'Maximale Kraft [kg]',
+                'handkraft_rel_title':  'Relative Greifkraft der dominanten Hand (kg/kg)',
+                'handkraft_rel_ylabel': 'Kraft / Körpergewicht [kg/kg]',
+                'kreuzheben_title':     'Isom. Kreuzheben (Absolut) [Athleten-Norm!]',
+                'kreuzheben_ylabel':    'Kraft (kg)',
+                'groesse_title':        'Körpergrösse',
+                'groesse_ylabel':       'Grösse (cm)',
+                'gewicht_title':        'Körpergewicht',
+                'gewicht_ylabel':       'Gewicht (kg)',
+                # maturity plot
+                'mat_phv_label':    'Wachstumsschub (PHV)',
+                'mat_status_in':    'Mitten im Schub',
+                'mat_status_before':'Noch ca. {y:.1f} J. bis zum Schub',
+                'mat_status_after': 'Schub vor ca. {y:.1f} J. erfolgt',
+                'mat_title':        'Biologischer Reifegrad (Verlauf)',
+                'mat_xlabel':       'Chronologisches Alter (Jahre)',
+                'mat_ylabel':       'Jahre bis/seit dem Wachstumsschub',
+                # overview suffix
+                'all_suffix':       '\u2013 ALLE',
+                'patients_legend':  'Patienten',
+            },
+            'en': {
+                'girls':            'Girls',
+                'boys':             'Boys',
+                'age_axis':         'Age [Years]',
+                'you':              'You',
+                'your_maturity':    'Your Maturity',
+                # plot titles
+                'sprung_title':         'Jump Height',
+                'sprung_ylabel':        'Jump Height (cm)',
+                'sprung_rel_title':     'Max. Jump Power',
+                'sprung_rel_ylabel':    'Power (W/kg)',
+                'vo2max_title':         'Cardiorespiratory Fitness (VO2max)',
+                'vo2max_ylabel':        'Oxygen (mL/kg/min)',
+                'leistung_title':       'Max. Power Output (Ergometer)',
+                'leistung_ylabel':      'Power (Watts)',
+                'kreuzheben_rel_title': 'Whole-Body Strength (Relative) [Athlete Norm!]',
+                'kreuzheben_rel_ylabel':'Force / Body Weight (kg/kg)',
+                'beinstrecker_title':   'Max. Leg Extension Strength',
+                'beinstrecker_ylabel':  'Force (Nm)',
+                'beinstrecker_rel_title':  'Leg Strength (Relative)',
+                'beinstrecker_rel_ylabel': 'Force (Nm/kg)',
+                'handkraft_title':      'Max. Grip Strength – Dominant Hand (kg)',
+                'handkraft_ylabel':     'Max. Force [kg]',
+                'handkraft_rel_title':  'Relative Grip Strength – Dominant Hand (kg/kg)',
+                'handkraft_rel_ylabel': 'Force / Body Weight [kg/kg]',
+                'kreuzheben_title':     'Isom. Deadlift (Absolute) [Athlete Norm!]',
+                'kreuzheben_ylabel':    'Force (kg)',
+                'groesse_title':        'Body Height',
+                'groesse_ylabel':       'Height (cm)',
+                'gewicht_title':        'Body Weight',
+                'gewicht_ylabel':       'Weight (kg)',
+                # maturity plot
+                'mat_phv_label':    'Growth Spurt (PHV)',
+                'mat_status_in':    'Currently at Peak',
+                'mat_status_before':'Approx. {y:.1f} yrs until growth spurt',
+                'mat_status_after': 'Growth spurt approx. {y:.1f} yrs ago',
+                'mat_title':        'Biological Maturity (Trend)',
+                'mat_xlabel':       'Chronological Age (Years)',
+                'mat_ylabel':       'Years before/after Growth Spurt',
+                # overview suffix
+                'all_suffix':       '\u2013 ALL',
+                'patients_legend':  'Patients',
+            },
+        }
+        self._vt = _labels.get(lang, _labels['de'])
 
     def _calc_lms(self, l, m, s, z):
         """LMS Formel: L=0 -> Log-Normal (Exp), sonst Standard-Box-Cox"""
@@ -35,39 +125,42 @@ class Visualizer:
 
         
         # --- REFERENZDATEN LADEN JE NACH METRIK ---
+        vt = self._vt
+        sex_label = vt['girls'] if sex == 'girls' else vt['boys']
+
         if metric_type == 'sprung':
-            title = f"Sprunghöhe ({'Mädchen' if sex == 'girls' else 'Jungs'})"
-            ylabel = "Sprunghöhe (cm)"
+            title = f"{vt['sprung_title']} ({sex_label})"
+            ylabel = vt['sprung_ylabel']
             for age in ages:
                 refs = get_jump_height_reference(age, sex)
                 for p in refs: percentiles_data[p].append(refs[p])
 
-        elif metric_type == 'pmax_rel':
-            title = f"Sprungkraft pro kg ({'Mädchen' if sex == 'girls' else 'Jungs'})"
-            ylabel = "Leistung (W/kg)"
+        elif metric_type == 'sprung_rel':
+            title = f"{vt['sprung_rel_title']} ({sex_label})"
+            ylabel = vt['sprung_rel_ylabel']
             for age in ages:
                 refs = get_pmax_mass_reference(age, sex)
                 for p in refs: percentiles_data[p].append(refs[p])
 
         elif metric_type == 'vo2max':
-            title = f"Ausdauer (VO2max) ({'Mädchen' if sex == 'girls' else 'Jungs'})"
-            ylabel = "Sauerstoff (mL/kg/min)"
+            title = f"{vt['vo2max_title']} ({sex_label})"
+            ylabel = vt['vo2max_ylabel']
             for age in ages:
                 refs = get_vo2max_reference(age, sex)
                 for p in refs: percentiles_data[p].append(refs[p])
                 
         elif metric_type == 'leistung':
-            title = f"Max. Leistung Ergometer ({'Mädchen' if sex == 'girls' else 'Jungs'})"
-            ylabel = "Leistung (Watt)"
+            title = f"{vt['leistung_title']} ({sex_label})"
+            ylabel = vt['leistung_ylabel']
             p_names = ['P3', 'P10', 'P25', 'P50', 'P75', 'P90', 'P97']
             for age in ages:
                 vals = get_smoothed_reference(age, sex, PMAX_ABS_DATA)
                 for i, p in enumerate(p_names):
                     percentiles_data[p].append(vals[i])
 
-        elif metric_type == 'mtp_rel':
-            title = f"Ganzkörperkraft (Relativ) [Athleten-Norm!]"
-            ylabel = "Kraft / Gewicht (kg/kg)"
+        elif metric_type == 'kreuzheben_rel':
+            title = vt['kreuzheben_rel_title']
+            ylabel = vt['kreuzheben_rel_ylabel']
             p_names = ['P3', 'P10', 'P25', 'P50', 'P75', 'P90', 'P97']
             for age in ages:
                 vals = get_smoothed_reference(age, sex, MTP_REL_DATA)
@@ -75,17 +168,17 @@ class Visualizer:
                     percentiles_data[p].append(vals[i])
 
         elif metric_type == 'beinstrecker':
-            title = f"Max. Beinstreckkraft ({'Mädchen' if sex == 'girls' else 'Jungs'})"
-            ylabel = "Kraft (Nm)"
+            title = f"{vt['beinstrecker_title']} ({sex_label})"
+            ylabel = vt['beinstrecker_ylabel']
             p_names = ['P3', 'P10', 'P25', 'P50', 'P75', 'P90', 'P97']
             for age in ages:
                 vals = get_smoothed_reference(age, sex, KNEE_EXT_ABS_HEBERT)
                 for i, p in enumerate(p_names):
                     percentiles_data[p].append(vals[i])
                     
-        elif metric_type == 'leg_ext_rel':
-            title = f"Beinkraft Relativ ({'Mädchen' if sex == 'girls' else 'Jungs'})"
-            ylabel = "Kraft (Nm/kg)"
+        elif metric_type == 'beinstrecker_rel':
+            title = f"{vt['beinstrecker_rel_title']} ({sex_label})"
+            ylabel = vt['beinstrecker_rel_ylabel']
             p_names = ['P3', 'P10', 'P25', 'P50', 'P75', 'P90', 'P97']
             for age in ages:
                 vals = get_smoothed_reference(age, sex, KNEE_EXT_REL_HEBERT)
@@ -93,8 +186,8 @@ class Visualizer:
                     percentiles_data[p].append(vals[i])
                     
         elif metric_type == 'handkraft':
-            title = f"Maximale Greifkraft der dominanten Hand (kg)"
-            ylabel = "Maximale Kraft [kg]"
+            title = vt['handkraft_title']
+            ylabel = vt['handkraft_ylabel']
             p_names = ['P3', 'P10', 'P25', 'P50', 'P75', 'P90', 'P97']
             for age in ages:
                 vals = get_smoothed_reference(age, sex, HANDGRIP_DOM_BOHANNON)
@@ -102,19 +195,18 @@ class Visualizer:
                     percentiles_data[p].append(vals[i])
                     
         elif metric_type == 'handkraft_rel':
-            title = f"Relative Greifkraft der dominanten Hand (kg/kg)"
-            ylabel = "Kraft / Körpergewicht [kg/kg]"
+            title = vt['handkraft_rel_title']
+            ylabel = vt['handkraft_rel_ylabel']
             p_names = ['P3', 'P10', 'P25', 'P50', 'P75', 'P90', 'P97']
             for age in ages:
-                # If patient_weight is provided, use it. Otherwise, default to something to avoid crashing (e.g., 50kg)
                 w = patient_weight if patient_weight and patient_weight > 0 else 50.0
                 vals = get_relative_handgrip_bohannon(age, sex, w)
                 for i, p in enumerate(p_names):
                     percentiles_data[p].append(vals[i])
 
         elif metric_type == 'kreuzheben':
-            title = f"Isom. Kreuzheben (Absolut) [Athleten-Norm!]"
-            ylabel = "Kraft (kg)"
+            title = vt['kreuzheben_title']
+            ylabel = vt['kreuzheben_ylabel']
             p_names = ['P3', 'P10', 'P25', 'P50', 'P75', 'P90', 'P97']
             for age in ages:
                 vals = get_smoothed_reference(age, sex, MTP_ABS_DATA)
@@ -122,8 +214,8 @@ class Visualizer:
                     percentiles_data[p].append(vals[i])
 
         elif metric_type == 'groesse':
-            title = f"Körpergrösse ({'Mädchen' if sex == 'girls' else 'Jungs'})"
-            ylabel = "Grösse (cm)"
+            title = f"{vt['groesse_title']} ({sex_label})"
+            ylabel = vt['groesse_ylabel']
             p_names = ['P3', 'P10', 'P25', 'P50', 'P75', 'P90', 'P97']
             for age in ages:
                 vals = get_smoothed_reference(age, sex, HEIGHT_DATA)
@@ -131,8 +223,8 @@ class Visualizer:
                     percentiles_data[p].append(vals[i])
 
         elif metric_type == 'gewicht':
-            title = f"Körpergewicht ({'Mädchen' if sex == 'girls' else 'Jungs'})"
-            ylabel = "Gewicht (kg)"
+            title = f"{vt['gewicht_title']} ({sex_label})"
+            ylabel = vt['gewicht_ylabel']
             p_names = ['P3', 'P10', 'P25', 'P50', 'P75', 'P90', 'P97']
             for age in ages:
                 vals = get_smoothed_reference(age, sex, WEIGHT_DATA)
@@ -158,10 +250,10 @@ class Visualizer:
             
             last_age, last_val = p_ages[-1], p_vals[-1]
             plt.plot(last_age, last_val, 'ro', markersize=9, zorder=10)
-            plt.text(last_age, last_val + (last_val*0.05), "Du", color='red', fontweight='bold', ha='center', zorder=11)
+            plt.text(last_age, last_val + (last_val*0.05), vt['you'], color='red', fontweight='bold', ha='center', zorder=11)
 
         plt.title(title)
-        plt.xlabel("Alter [Jahre]")
+        plt.xlabel(vt['age_axis'])
         plt.ylabel(ylabel)
         plt.grid(True, which='both', linestyle=':', alpha=0.6)
         plt.xlim(5.5, 19.5)
@@ -170,6 +262,7 @@ class Visualizer:
         plt.close()
     def create_maturity_plot(self, history, sex, output_path):
         """Erstellt eine Visualisierung für den Reifegrad-Verlauf (Mirwald)."""
+        vt = self._vt
         plt.figure(figsize=(6, 3.5))
         
         # Horizontaler Bereich für PHV
@@ -187,7 +280,7 @@ class Visualizer:
         plt.xlim(min(all_ages)-1, max(all_ages)+1)
         plt.ylim(-4, 4)
 
-        plt.text(plt.xlim()[0] + 0.5, 0.6, "Wachstumsschub (PHV)", ha='left', color='green', fontsize=9, fontweight='bold')
+        plt.text(plt.xlim()[0] + 0.5, 0.6, vt['mat_phv_label'], ha='left', color='green', fontsize=9, fontweight='bold')
         
         if history:
             if isinstance(history[0], dict):
@@ -196,24 +289,27 @@ class Visualizer:
             else:
                 ages, offsets = zip(*history)
                 
-            plt.plot(ages, offsets, 'ro-', linewidth=2, markersize=6, label='Dein Reifegrad')
+            plt.plot(ages, offsets, 'ro-', linewidth=2, markersize=6, label=vt['your_maturity'])
             # Letzten Punkt hervorheben
             plt.plot(ages[-1], offsets[-1], 'ro', markersize=10, markeredgecolor='white')
             
             # Aktueller Status Text
             curr_off = offsets[-1]
-            if abs(curr_off) < 0.5: status = "Mitten im Schub"
-            elif curr_off < 0: status = f"Noch ca. {abs(curr_off):.1f} J. bis zum Schub"
-            else: status = f"Schub vor ca. {curr_off:.1f} J. erfolgt"
+            if abs(curr_off) < 0.5:
+                status = vt['mat_status_in']
+            elif curr_off < 0:
+                status = vt['mat_status_before'].format(y=abs(curr_off))
+            else:
+                status = vt['mat_status_after'].format(y=curr_off)
             
             plt.annotate(status, xy=(ages[-1], offsets[-1]), xytext=(0, 20),
                          textcoords='offset points', ha='center', 
                          bbox=dict(boxstyle='round,pad=0.3', fc='white', ec='red', alpha=0.8),
                          fontsize=8, color='red', fontweight='bold')
 
-        plt.title("Biologischer Reifegrad (Verlauf)", fontsize=11, fontweight='bold')
-        plt.xlabel("Chronologisches Alter (Jahre)", fontsize=9)
-        plt.ylabel("Jahre bis/seit dem Wachstumsschub", fontsize=9)
+        plt.title(vt['mat_title'], fontsize=11, fontweight='bold')
+        plt.xlabel(vt['mat_xlabel'], fontsize=9)
+        plt.ylabel(vt['mat_ylabel'], fontsize=9)
         plt.grid(True, linestyle=':', alpha=0.6)
         
         plt.tight_layout()
@@ -237,65 +333,67 @@ class Visualizer:
             '#9A6324', '#800000', '#aaffc3', '#808000', '#000075',
             '#a9a9a9', '#000000', '#ffd8b1', '#fabed4', '#fffac8',
         ]
+        vt = self._vt
 
         fig, ax = plt.subplots(figsize=(10, 6))
         ages = np.linspace(6, 18, 100)
         percentiles_data = {p: [] for p in self.colors.keys()}
         p_names = ['P3', 'P10', 'P25', 'P50', 'P75', 'P90', 'P97']
 
-        sex_label = 'Mädchen' if sex == 'girls' else 'Jungs'
+        sex_label = vt['girls'] if sex == 'girls' else vt['boys']
+        all_sfx = vt['all_suffix']
         ylabel = ""
 
         if metric_type == 'sprung':
-            title, ylabel = f"Sprunghöhe – ALLE ({sex_label})", "Sprunghöhe (cm)"
+            title, ylabel = f"{vt['sprung_title']} {all_sfx} ({sex_label})", vt['sprung_ylabel']
             for age in ages:
                 refs = get_jump_height_reference(age, sex)
                 for p in refs: percentiles_data[p].append(refs[p])
 
-        elif metric_type == 'pmax_rel':
-            title, ylabel = f"Sprungkraft/kg – ALLE ({sex_label})", "Leistung (W/kg)"
+        elif metric_type == 'sprung_rel':
+            title, ylabel = f"{vt['sprung_rel_title']}/kg {all_sfx} ({sex_label})", vt['sprung_rel_ylabel']
             for age in ages:
                 refs = get_pmax_mass_reference(age, sex)
                 for p in refs: percentiles_data[p].append(refs[p])
 
         elif metric_type == 'vo2max':
-            title, ylabel = f"VO2max – ALLE ({sex_label})", "mL/kg/min"
+            title, ylabel = f"VO2max {all_sfx} ({sex_label})", vt['vo2max_ylabel']
             for age in ages:
                 refs = get_vo2max_reference(age, sex)
                 for p in refs: percentiles_data[p].append(refs[p])
 
         elif metric_type == 'leistung':
-            title, ylabel = f"Max. Leistung – ALLE ({sex_label})", "Leistung (Watt)"
+            title, ylabel = f"{vt['leistung_title']} {all_sfx} ({sex_label})", vt['leistung_ylabel']
             for age in ages:
                 vals = get_smoothed_reference(age, sex, PMAX_ABS_DATA)
                 for i, p in enumerate(p_names): percentiles_data[p].append(vals[i])
 
-        elif metric_type == 'mtp_rel':
-            title, ylabel = "Ganzkörperkraft Relativ – ALLE [Athleten-Norm!]", "kg/kg"
+        elif metric_type == 'kreuzheben_rel':
+            title, ylabel = f"{vt['kreuzheben_rel_title']} {all_sfx}", vt['kreuzheben_rel_ylabel']
             for age in ages:
                 vals = get_smoothed_reference(age, sex, MTP_REL_DATA)
                 for i, p in enumerate(p_names): percentiles_data[p].append(vals[i])
 
         elif metric_type == 'beinstrecker':
-            title, ylabel = f"Max. Beinstreckkraft – ALLE ({sex_label})", "Kraft (Nm)"
+            title, ylabel = f"{vt['beinstrecker_title']} {all_sfx} ({sex_label})", vt['beinstrecker_ylabel']
             for age in ages:
                 vals = get_smoothed_reference(age, sex, KNEE_EXT_ABS_HEBERT)
                 for i, p in enumerate(p_names): percentiles_data[p].append(vals[i])
 
-        elif metric_type == 'leg_ext_rel':
-            title, ylabel = f"Beinkraft Relativ – ALLE ({sex_label})", "Kraft (Nm/kg)"
+        elif metric_type == 'beinstrecker_rel':
+            title, ylabel = f"{vt['beinstrecker_rel_title']} {all_sfx} ({sex_label})", vt['beinstrecker_rel_ylabel']
             for age in ages:
                 vals = get_smoothed_reference(age, sex, KNEE_EXT_REL_HEBERT)
                 for i, p in enumerate(p_names): percentiles_data[p].append(vals[i])
 
         elif metric_type == 'handkraft':
-            title, ylabel = f"Greifkraft Absolut – ALLE ({sex_label})", "Kraft (kg)"
+            title, ylabel = f"{vt['handkraft_title']} {all_sfx} ({sex_label})", vt['handkraft_ylabel']
             for age in ages:
                 vals = get_smoothed_reference(age, sex, HANDGRIP_DOM_BOHANNON)
                 for i, p in enumerate(p_names): percentiles_data[p].append(vals[i])
 
         elif metric_type == 'handkraft_rel':
-            title, ylabel = f"Greifkraft Relativ – ALLE ({sex_label})", "kg/kg"
+            title, ylabel = f"{vt['handkraft_rel_title']} {all_sfx} ({sex_label})", vt['handkraft_rel_ylabel']
             weights = [w for _, _, w in all_patients_histories if w and w > 0]
             avg_weight = float(np.mean(weights)) if weights else 40.0
             for age in ages:
@@ -303,19 +401,19 @@ class Visualizer:
                 for i, p in enumerate(p_names): percentiles_data[p].append(vals[i])
 
         elif metric_type == 'kreuzheben':
-            title, ylabel = "Isom. Kreuzheben – ALLE [Athleten-Norm!]", "Kraft (kg)"
+            title, ylabel = f"{vt['kreuzheben_title']} {all_sfx}", vt['kreuzheben_ylabel']
             for age in ages:
                 vals = get_smoothed_reference(age, sex, MTP_ABS_DATA)
                 for i, p in enumerate(p_names): percentiles_data[p].append(vals[i])
 
         elif metric_type == 'groesse':
-            title, ylabel = f"Körpergrösse – ALLE ({sex_label})", "Grösse (cm)"
+            title, ylabel = f"{vt['groesse_title']} {all_sfx} ({sex_label})", vt['groesse_ylabel']
             for age in ages:
                 vals = get_smoothed_reference(age, sex, HEIGHT_DATA)
                 for i, p in enumerate(p_names): percentiles_data[p].append(vals[i])
 
         elif metric_type == 'gewicht':
-            title, ylabel = f"Körpergewicht – ALLE ({sex_label})", "Gewicht (kg)"
+            title, ylabel = f"{vt['gewicht_title']} {all_sfx} ({sex_label})", vt['gewicht_ylabel']
             for age in ages:
                 vals = get_smoothed_reference(age, sex, WEIGHT_DATA)
                 for i, p in enumerate(p_names): percentiles_data[p].append(vals[i])
@@ -347,14 +445,14 @@ class Visualizer:
             ax.plot(p_ages[-1], p_vals[-1], 'o', color=color, markersize=6, zorder=6)
 
         ax.set_title(title, fontsize=12, fontweight='bold')
-        ax.set_xlabel("Alter [Jahre]")
+        ax.set_xlabel(vt['age_axis'])
         ax.set_ylabel(ylabel)
         ax.grid(True, which='both', linestyle=':', alpha=0.5)
         ax.set_xlim(5.5, 19.5)
 
         if all_patients_histories:
             ax.legend(fontsize=7, loc='upper left', bbox_to_anchor=(1.01, 1),
-                      borderaxespad=0, title="Patienten", title_fontsize=8)
+                      borderaxespad=0, title=vt['patients_legend'], title_fontsize=8)
 
         fig.tight_layout()
         fig.savefig(output_path, dpi=150, bbox_inches='tight')

@@ -8,10 +8,12 @@ echo ============================================================
 echo.
 cd /d "%~dp0"
 set /p IDs="Bitte die Record-IDs eingeben (mit Leerzeichen getrennt, z.B. decad_101 decad_105): "
+set /p LANG="Sprache (de/en, Enter fuer de): "
+if "%LANG%"=="" set LANG=de
 echo.
-echo Starte Verarbeitung fuer: %IDs%
+echo Starte Verarbeitung fuer: %IDs% (Sprache: %LANG%)
 echo.
-python src\main.py --ids %IDs%
+python src\main.py --ids %IDs% --lang %LANG%
 echo.
 if %ERRORLEVEL% neq 0 (
     echo FEHLER! Das Programm wurde mit einem Fehler beendet.

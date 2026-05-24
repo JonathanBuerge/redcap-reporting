@@ -125,26 +125,25 @@ class Analyzer:
         else:
             p_df["beinstrecker_combined"] = np.nan
 
-        # --- 3. Relative Max Power (Pmax ist bereits relativ, also KEINE Teilung durchs Gewicht) ---
+        # --- 3. Relative Max Power (crf_cmj_pmax ist bereits W/kg, KEINE Teilung durch Gewicht) ---
         if 'crf_cmj_pmax' in p_df.columns:
-            pmax_rel = self._safe_numeric(p_df['crf_cmj_pmax'])
-            p_df['pmax_rel_calculated'] = pmax_rel
+            p_df['sprung_rel_calculated'] = self._safe_numeric(p_df['crf_cmj_pmax'])
         else:
-            p_df['pmax_rel_calculated'] = np.nan
+            p_df['sprung_rel_calculated'] = np.nan
 
         # --- 4. Relative Kraftwerte berechnen (Division durch Gewicht) ---
         if 'crf_weight' in p_df.columns:
             weight = self._safe_numeric(p_df['crf_weight'])
             
-            # IMTP Relativ
+            # Kreuzheben Relativ
             if 'crf_mtp_lift' in p_df.columns:
                 mtp_abs = self._safe_numeric(p_df['crf_mtp_lift'])
-                p_df['mtp_rel_calculated'] = mtp_abs / weight
+                p_df['kreuzheben_rel_calculated'] = mtp_abs / weight
             else:
-                p_df['mtp_rel_calculated'] = np.nan
+                p_df['kreuzheben_rel_calculated'] = np.nan
                 
             # Beinstrecker Relativ
-            p_df['leg_ext_rel_calculated'] = p_df['beinstrecker_combined'] / weight
+            p_df['beinstrecker_rel_calculated'] = p_df['beinstrecker_combined'] / weight
             
             # Handkraft Relativ
             if 'crf_handgrip' in p_df.columns:
@@ -153,8 +152,8 @@ class Analyzer:
             else:
                 p_df['handkraft_rel_calculated'] = np.nan
         else:
-            p_df['mtp_rel_calculated'] = np.nan
-            p_df['leg_ext_rel_calculated'] = np.nan
+            p_df['kreuzheben_rel_calculated'] = np.nan
+            p_df['beinstrecker_rel_calculated'] = np.nan
             p_df['handkraft_rel_calculated'] = np.nan
 
         # --- 5. Maturity Offset nach Mirwald (NEU mit Verlauf) ---
@@ -165,22 +164,62 @@ class Analyzer:
             mat_temp_df['w_num'] = self._safe_numeric(mat_temp_df['crf_weight'])
             mat_temp_df['sh_num'] = self._safe_numeric(mat_temp_df['crf_sitting_height'])
             
+            # Korrektur der Sitzhöhe (gemessen auf Hocker von 46 cm Höhe)
+            def _correct_sh(x):
+                if pd.isna(x): return x
+                return x - 46.0 if x > 10 else x - 0.46
+            mat_temp_df['sh_num'] = mat_temp_df['sh_num'].apply(_correct_sh)
+            
             # Drop rows with missing data for maturity
             mat_valid = mat_temp_df.dropna(subset=['h_num', 'w_num', 'sh_num', 'age_calculated'])
+            
+            # Normwerte für das durchschnittliche Alter beim PHV
+            ref_phv = 14.0 if sex_str == 'boys' else 12.0
             
             for _, row in mat_valid.iterrows():
                 h, w, sh, age = row['h_num'], row['w_num'], row['sh_num'], row['age_calculated']
                 if h > 0:
                     leg = h - sh
+                    
+                    # --- Gleichung 1 (Jungs) / 2 (Mädchen): Ursprüngliche Gleichungen ---
                     if sex_str == 'boys':
-                        off = -9.236 + (0.0002708 * leg * sh) - (0.001663 * age * leg) + (0.007216 * age * sh) + (0.02292 * (w / h) * 100)
+                        off_eq12 = -29.769 + (0.0003007 * leg * sh) - (0.01177 * age * leg) + (0.01639 * age * sh) + (0.445 * (leg / h * 100))
+                        f_eq12_str = f"-29.769 + (0.0003007*{leg:.1f}*{sh:.1f}) - (0.01177*{age:.1f}*{leg:.1f}) + (0.01639*{age:.1f}*{sh:.1f}) + (0.445*({leg:.1f}/{h:.1f}*100))"
                     else:
-                        off = -9.376 + (0.0001882 * leg * sh) + (0.0022 * age * leg) + (0.005841 * age * sh) - (0.002658 * age * w) + (0.07693 * (w / h) * 100)
+                        off_eq12 = -16.364 + (0.0002309 * leg * sh) + (0.006277 * age * sh) + (0.179 * (leg / h * 100)) + (0.0009428 * age * w)
+                        f_eq12_str = f"-16.364 + (0.0002309*{leg:.1f}*{sh:.1f}) + (0.006277*{age:.1f}*{sh:.1f}) + (0.179*({leg:.1f}/{h:.1f}*100)) + (0.0009428*{age:.1f}*{w:.1f})"
+                    
+                    # --- Gleichung 3 (Jungs) / 4 (Mädchen): Kombinierte Gleichungen ---
+                    if sex_str == 'boys':
+                        off_eq34 = -9.236 + (0.0002708 * leg * sh) - (0.001663 * age * leg) + (0.007216 * age * sh) + (0.02292 * (w / h) * 100)
+                        f_eq34_str = f"-9.236 + (0.0002708*{leg:.1f}*{sh:.1f}) - (0.001663*{age:.1f}*{leg:.1f}) + (0.007216*{age:.1f}*{sh:.1f}) + (0.02292*({w:.1f}/{h:.1f})*100)"
+                    else:
+                        off_eq34 = -9.376 + (0.0001882 * leg * sh) + (0.0022 * age * leg) + (0.005841 * age * sh) - (0.002658 * age * w) + (0.07693 * (w / h) * 100)
+                        f_eq34_str = f"-9.376 + (0.0001882*{leg:.1f}*{sh:.1f}) + (0.0022*{age:.1f}*{leg:.1f}) + (0.005841*{age:.1f}*{sh:.1f}) - (0.002658*{age:.1f}*{w:.1f}) + (0.07693*({w:.1f}/{h:.1f})*100)"
+                    
+                    # Biologische Alter beider Gleichungen
+                    bio_age_eq12 = ref_phv + off_eq12
+                    bio_age_eq34 = ref_phv + off_eq34
+                    
                     maturity_history.append({
-                        "chron_age": age,
-                        "offset": off,
-                        "bio_age": age + off,
-                        "date": str(row['crf_date']) if pd.notna(row.get('crf_date')) else results['meta'].get('Messdatum', '-')
+                        "chron_age":    age,
+                        # Eq 3/4 (Hauptgleichung, rückwärtskompatibel)
+                        "offset":       off_eq34,
+                        "bio_age":      bio_age_eq34,
+                        # Eq 1/2 (Vergleichsgleichung)
+                        "off_eq12":     off_eq12,
+                        "bio_age_eq12": bio_age_eq12,
+                        # Eq 3/4 explizit (zur Klarheit in DEV-Auswertung)
+                        "off_eq34":     off_eq34,
+                        "bio_age_eq34": bio_age_eq34,
+                        # Rohdaten (für DEV-Tabelle)
+                        "raw_h":   round(h,  1),
+                        "raw_w":   round(w,  1),
+                        "raw_sh":  round(sh, 1),
+                        "raw_leg": round(leg,1),
+                        "date": str(row['crf_date']) if pd.notna(row.get('crf_date')) else results['meta'].get('Messdatum', '-'),
+                        "f_eq12_str": f_eq12_str,
+                        "f_eq34_str": f_eq34_str
                     })
         
         results["meta"]["maturity_history"] = maturity_history
@@ -194,15 +233,16 @@ class Analyzer:
             results["meta"]["biological_age"] = None
             results["meta"]["latest_mat_data"] = None
 
+
         # --- 6. Metriken extrahieren (Alle: Absolut & Relativ) ---
         full_map = self.metric_map.copy()
         
         # Wir fügen die neu berechneten Spalten hinzu
-        full_map["beinstrecker"] = "beinstrecker_combined"       # ABSOLUT
-        full_map["pmax_rel"] = "pmax_rel_calculated"             # RELATIV
-        full_map["mtp_rel"] = "mtp_rel_calculated"               # RELATIV
-        full_map["leg_ext_rel"] = "leg_ext_rel_calculated"       # RELATIV
-        full_map["handkraft_rel"] = "handkraft_rel_calculated"   # RELATIV
+        full_map["beinstrecker"]     = "beinstrecker_combined"       # ABSOLUT
+        full_map["sprung_rel"]       = "sprung_rel_calculated"        # RELATIV (W/kg)
+        full_map["kreuzheben_rel"]   = "kreuzheben_rel_calculated"    # RELATIV
+        full_map["beinstrecker_rel"] = "beinstrecker_rel_calculated"  # RELATIV
+        full_map["handkraft_rel"]    = "handkraft_rel_calculated"     # RELATIV
 
         for metric_name, col_name in full_map.items():
             val_pre, val_post, diff_pct = "-", "-", None
@@ -210,7 +250,12 @@ class Analyzer:
 
             if col_name in p_df.columns:
                 # Unterscheidung: selbst berechnete oder originale Spalten
-                if col_name in ["beinstrecker_combined", "pmax_rel_calculated", "mtp_rel_calculated", "leg_ext_rel_calculated", "handkraft_rel_calculated"]:
+                computed_cols = [
+                    "beinstrecker_combined", "sprung_rel_calculated",
+                    "kreuzheben_rel_calculated", "beinstrecker_rel_calculated",
+                    "handkraft_rel_calculated"
+                ]
+                if col_name in computed_cols:
                     series = p_df[col_name]
                 else:
                     series = self._safe_numeric(p_df[col_name])
