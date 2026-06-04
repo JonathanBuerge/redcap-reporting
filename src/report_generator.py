@@ -42,19 +42,19 @@ class ReportGenerator:
                 'sex_female':        'Weiblich',
                 # Intro page
                 'begruessung':       (
-                    "Dieser Bericht fasst die Ergebnisse der körperlichen Leistungsfähigkeit zusammen. "
+                    "Dieser Bericht fasst die Ergebnisse der körperlichen Leistungsfähigkeit zusammen, welche im Rahmen der DECADE-Studie erhoben wurde. "
                     "Er dient dazu, individuelle Stärken aufzuzeigen und die Entwicklung über die Zeit zu dokumentieren."
                 ),
                 'intro_h1':          'Wie lese ich die Grafiken?',
                 'intro_grafik':      (
                     "Die meisten Ergebnisse werden als Perzentilkurven dargestellt. Diese vergleichen die Leistung "
-                    "mit einer gesunden Referenzgruppe gleichen Alters und Geschlechts. Die x-Achse ist jeweils die Zeit (Alter), die y-Achse die Messung.<br/><br/>"
+                    "mit einer gesunden Referenzgruppe gleichen Alters und Geschlechts. Die x-Achse (horizontal) ist jeweils die Zeit (Alter), die y-Achse (vertikal) die Messung.<br/><br/>"
                     "&#8226; Die mittlere, dicke Linie (P50) ist der exakte Durchschnitt.<br/>"
                     "&#8226; Liegt ein Wert auf der P75-Linie, bedeutet das: 75% der Vergleichsgruppe sind schwächer, "
                     "25% sind stärker. Diese Aussage gilt analog für die anderen Kurven.<br/><br/>"
                     "Die roten Punkte zeigen den individuellen Verlauf. Der Startwert ist der Wert der ersten Messung. "
                     "Der Report zu einem Messzeitpunkt hat auch alle früheren Messwerte in die Graphen eingezeichnet. "
-                    "Die ausgewiesene Differenz in den Tabellen ist immer vom letzten zum ersten Messtermin gerechnet."
+                    "Die ausgewiesene Differenz in den Tabellen ist immer vom letzten zum ersten Messtermin prozentual gerechnet."
                 ),
                 'intro_h2':          'Absolute vs. Relative Werte',
                 'intro_relativ':     (
@@ -69,6 +69,9 @@ class ReportGenerator:
                     "Kurven auf spezifischen Referenzgruppen (z.\u202FB. internationale Kohorten oder Nachwuchsathleten). "
                     "Einige Referenzwerte können aufgrund kleiner Stichprobengrössen der zugrundeliegenden Studien ungenau sein. "
                     "Kleinere Abweichungen bei der Testdurchführung können die Ergebnisse ebenfalls beeinflussen. "
+                    "Die Auswertung erfolgt auf Basis des kalendarischen Alters. Da sich Kinder biologisch jedoch unterschiedlich schnell entwickeln " 
+                    "– der individuelle Reifeprozess kann gegenüber dem Durchschnitt um bis zu drei Jahre variieren –, sind Abweichungen " 
+                    "von der Normkurve häufig völlig normal und kein Grund zur Sorge. "
                     "Die Daten dienen der Orientierung und ersetzen keine medizinische Diagnose."
                 ),
                 # Maturity block
@@ -92,7 +95,7 @@ class ReportGenerator:
                 ),
                 'mat_warning':       (
                     "Wichtiger methodischer Hinweis: Die Berechnung des biologischen Reifegrades basiert auf "
-                    "anthropometrischen Schätzformeln (Mirwald et al.). Da die individuelle biologische Entwicklung "
+                    "anthropometrischen Schätzformeln (Mirwald et al., 2002). Da die individuelle biologische Entwicklung "
                     "unregelmässig verläuft, sind diese Werte als Annäherung mit einer beträchtlichen "
                     "Schätzunsicherheit zu verstehen und sollten mit Vorsicht interpretiert werden."
                 ),
@@ -143,6 +146,9 @@ class ReportGenerator:
                     "reference curves are based on specific populations (e.g. international cohorts or youth athletes). "
                     "Some reference values may be imprecise due to small sample sizes in the underlying studies. "
                     "Minor deviations in test execution can also affect results. "
+                    "The evaluation is based on chronological age. However, since children develop biologically at different rates "
+                    "– the individual maturation process can vary by up to three years compared to the average –, deviations "
+                    "from the norm curve are often completely normal and no cause for concern. "
                     "Data are for guidance only and do not replace medical diagnosis."
                 ),
                 # Maturity block
@@ -190,26 +196,26 @@ class ReportGenerator:
                 ("Anthropometrie", [
                     ("Körpergrösse", "groesse", "cm", "groesse_abs.png",
                      "Zeigt das Längenwachstum im Vergleich zur altersentsprechenden Norm.",
-                     "Ref: Deutschland, gesunde Kinder (KiGGS) | DOI: 10.1007/s001120170107", False),
+                     "Ref: Deutschland, gesunde Kinder (Kromeyer-Hauschild) | DOI: 10.1007/s001120170107", False),
                     ("Körpergewicht", "gewicht", "kg", "gewicht_abs.png",
                      "Zeigt die Gewichtsentwicklung im Vergleich zur altersentsprechenden Norm.",
-                     "Ref: Deutschland, gesunde Kinder (KiGGS) | DOI: 10.1007/s001120170107", False)
+                     "Ref: Deutschland, gesunde Kinder (Kromeyer-Hauschild) | DOI: 10.1007/s001120170107", False)
                 ]),
                 ("Kraftmessungen", [
                     ("Max. Greifkraft (Absolut)", "handkraft", "kg", "handkraft_abs.png",
-                     "Maß für die allgemeine Kraft des Oberkörpers (gezeigt für die dominante Hand). Methodischer Hinweis: Messung der maximalen isometrischen Kraft mittels standardisiertem Hand-Dynamometer.",
+                     "Mass für die allgemeine Kraft des Oberkörpers (gezeigt für die dominante Hand). Methodischer Hinweis: Messung der maximalen isometrischen Kraft mittels standardisiertem Hand-Dynamometer.",
                      "Ref: Bohannon et al. (2017), Pediatric Physical Therapy. | Populationsbasierte Normwerte aus dem NIH Toolbox Projekt (n = 2.706).", False),
                     ("Greifkraft (Relativ)", "handkraft_rel", "kg/kg", "handkraft_rel.png",
                      "Maximale Handkraft im Verhältnis zum Körpergewicht. Methodischer Hinweis: Messung der maximalen isometrischen Kraft mittels standardisiertem Hand-Dynamometer.",
                      "Ref: Bohannon et al. (2017), Pediatric Physical Therapy. | Populationsbasierte Normwerte aus dem NIH Toolbox Projekt (n = 2.706).", False),
                     ("Sprunghöhe", "sprung", "cm", "sprung_abs.png",
                      "Zeigt die Explosivität, Beinkraft und koordinative Schnellkraft.",
-                     "Ref: Tschechien, gesunde Kinder und Jugendliche | DOI: 10.1016/j.bone.2013.06.012", False),
+                     "Ref: Tschechien, gesunde Kinder und Jugendliche | PMID: 23989252", False),
                     ("Max. Sprungpower (Relativ)", "sprung_rel", "W/kg", "sprung_rel.png",
-                     "Zeigt die maximale mechanische Leistung der Beinmuskulatur (Power) pro kg Körpergewicht während des Sprungs.",
-                     "Ref: Tschechien, gesunde Kinder und Jugendliche | DOI: 10.1016/j.bone.2013.06.012", False),
+                     "Zeigt die maximale mechanische Leistung/Beschleunigung der Beinmuskulatur (Power) pro kg Körpergewicht während des Sprungs.",
+                     "Ref: Tschechien, gesunde Kinder und Jugendliche | PMID: 23989252", False),
                     ("Isom. Kreuzheben (Absolut)", "kreuzheben", "kg", "kreuzheben_abs.png",
-                     "Misst die statische Maximalkraft des gesamten Körpers. Achtung: Verglichen mit NachwuchsathletInnen!",
+                     "Misst die statische Maximalkraft des gesamten Körpers beim Kreuzheben. Achtung: Verglichen mit NachwuchsathletInnen!",
                      "Ref: Morris et al. (2020) Jungs & Salter et al. (2025) Mädchen (Athleten-Norm!)", False),
                     ("Ganzkörperkraft (Relativ)", "kreuzheben_rel", "kg/kg", "kreuzheben_rel.png",
                      "Statische Maximalkraft des Körpers im Verhältnis zum Körpergewicht. Achtung: Verglichen mit NachwuchsathletInnen!",
@@ -223,7 +229,10 @@ class ReportGenerator:
                 ]),
                 ("Spiroergometrie", [
                     ("Ausdauer (VO2max)", "vo2max", "mL/kg/min", "vo2max_abs.png",
-                     "Die maximale Sauerstoffaufnahme ist der Goldstandard für die Herz-Kreislauf-Fitness.",
+                     "Die VO2max gilt als der 'Goldstandard' zur Bestimmung der Herz-Kreislauf-Fitness. Sie misst, "
+                     "wie viel Sauerstoff dein Körper unter maximaler Belastung aufnehmen, in den Blutkreislauf transportieren "
+                     "und in die Muskeln weiterleiten kann, um Energie zu erzeugen. Da dieser Wert relativ zum Körpergewicht gemessen wird "
+                     "(in ml pro kg Körpergewicht pro Minute), ermöglicht er einen fairen Vergleich der Leistungsfähigkeit unabhängig von der individuellen Körpermasse..",
                      "Ref: Niederlande, gesunde Kinder und Jugendliche (SentrySuite) | DOI: 10.1513/AnnalsATS.201611-912FR", False),
                     ("Max. Leistung", "leistung", "Watt", "leistung_abs.png",
                      "Maximale mechanische Ausdauer-Leistung auf dem Fahrrad-Ergometer.",
@@ -234,10 +243,10 @@ class ReportGenerator:
                 ("Anthropometrie", [
                     ("Body Height", "groesse", "cm", "groesse_abs.png",
                      "Shows height development compared to the age-appropriate norm.",
-                     "Ref: Germany, healthy children (KiGGS) | DOI: 10.1007/s001120170107", False),
+                     "Ref: Germany, healthy children (Kromeyer-Hauschild) | DOI: 10.1007/s001120170107", False),
                     ("Body Weight", "gewicht", "kg", "gewicht_abs.png",
                      "Shows weight development compared to the age-appropriate norm.",
-                     "Ref: Germany, healthy children (KiGGS) | DOI: 10.1007/s001120170107", False)
+                     "Ref: Germany, healthy children (Kromeyer-Hauschild) | DOI: 10.1007/s001120170107", False)
                 ]),
                 ("Kraftmessungen", [
                     ("Max. Grip Strength (Absolute)", "handkraft", "kg", "handkraft_abs.png",
@@ -248,10 +257,10 @@ class ReportGenerator:
                      "Ref: Bohannon et al. (2017), Pediatric Physical Therapy. | Population-based norms from the NIH Toolbox Project (n = 2,706).", False),
                     ("Jump Height", "sprung", "cm", "sprung_abs.png",
                      "Reflects explosive power, leg strength and coordinative speed-strength.",
-                     "Ref: Czech Republic, healthy children and adolescents | DOI: 10.1016/j.bone.2013.06.012", False),
+                     "Ref: Czech Republic, healthy children and adolescents | PMID: 23989252", False),
                     ("Max. Jump Power (Relative)", "sprung_rel", "W/kg", "sprung_rel.png",
                      "Shows the maximum mechanical power output of the leg muscles (power) per kg of body weight during the jump.",
-                     "Ref: Czech Republic, healthy children and adolescents | DOI: 10.1016/j.bone.2013.06.012", False),
+                     "Ref: Czech Republic, healthy children and adolescents | PMID: 23989252", False),
                     ("Isom. Deadlift (Absolute)", "kreuzheben", "kg", "kreuzheben_abs.png",
                      "Measures static whole-body strength. Note: Compared with youth athletes!",
                      "Ref: Morris et al. (2020) Boys & Salter et al. (2025) Girls (Athlete Norm!)", False),
@@ -267,7 +276,10 @@ class ReportGenerator:
                 ]),
                 ("Spiroergometrie", [
                     ("Cardiorespiratory Fitness (VO2max)", "vo2max", "mL/kg/min", "vo2max_abs.png",
-                     "Maximal oxygen uptake is the gold standard for cardiorespiratory fitness.",
+                     "VO2max is considered the 'gold standard' for determining cardiorespiratory fitness. It measures "
+                     "how much oxygen your body can take in under maximal exertion, transport into the bloodstream, "
+                     "and deliver to the muscles to produce energy. Because this value is measured relative to body weight "
+                     "(in ml per kg of body weight per minute), it allows for a fair comparison of performance independent of individual body mass.",
                      "Ref: Netherlands, healthy children and adolescents (SentrySuite) | DOI: 10.1513/AnnalsATS.201611-912FR", False),
                     ("Max. Power Output", "leistung", "Watts", "leistung_abs.png",
                      "Maximum mechanical endurance power output on the cycle ergometer.",
@@ -295,7 +307,7 @@ class ReportGenerator:
             name='SectionHeader', parent=self.styles['Heading2'], 
             fontName='Times-Bold', fontSize=14, leading=16, 
             textColor=UNIBAS_ANTHRAZIT, backColor=UNIBAS_MINT, 
-            borderPadding=(6, 4, 6, 4), alignment=TA_LEFT, spaceBefore=5, spaceAfter=10,
+            borderPadding=(6, 4, 6, 4), alignment=TA_LEFT, spaceBefore=5, spaceAfter=4,
             keepWithNext=True
         ))
         
@@ -573,16 +585,18 @@ class ReportGenerator:
         elements.append(Spacer(1, 0.8*cm))
         elements.append(Paragraph(self._t['contact_heading'], self.styles['SectionHeader']))
 
-        impressum_text_left = """<br/>
-        <b>DECADE Studie:</b> <a href="https://decade.dsbg.unibas.ch/de/" color="blue">https://decade.dsbg.unibas.ch/de/</a><br/>
-        <b>Leitung:</b> Romina Ledergerber &amp; Ralf Roth<br/>
-        <b>Kontakt:</b> <a href="mailto:romina.ledergerber@unibas.ch" color="blue">romina.ledergerber@unibas.ch</a> | +41 61 207 47 73
-        """
-        impressum_text_right = """<br/>
-        <b>Adresse:</b><br/>
-        Departement für Sport, Bewegung und Gesundheit<br/>
-        Grosse Allee 6, 4052 Basel, Switzerland
-        """
+        impressum_text_left = (
+            "<br/>"
+            "<b>DECADE Studie:</b> <a href=\"https://decade.dsbg.unibas.ch/de/\" color=\"blue\">https://decade.dsbg.unibas.ch/de/</a><br/>"
+            "<b>Leitung:</b> Romina Ledergerber &amp; Ralf Roth<br/>"
+            "<b>Kontakt:</b> <a href=\"mailto:romina.ledergerber@unibas.ch\" color=\"blue\">romina.ledergerber@unibas.ch</a> | +41 61 207 47 73"
+        )
+        impressum_text_right = (
+            "<br/>"
+            "<b>Adresse:</b><br/>"
+            "Departement für Sport, Bewegung und Gesundheit<br/>"
+            "Grosse Allee 6, 4052 Basel, Switzerland"
+        )
 
         p_left  = Paragraph(impressum_text_left,  self.styles['Impressum'])
         p_right = Paragraph(impressum_text_right, self.styles['Impressum'])
@@ -594,12 +608,12 @@ class ReportGenerator:
 
         img_impressum = ""
         if os.path.exists(logo_path):
-            img_impressum = Image(logo_path, width=4*cm, height=1.6*cm, kind='proportional')
+            img_impressum = Image(logo_path, width=4.5*cm, height=1.8*cm, kind='proportional')
 
-        table = Table([[p_left, p_right, img_impressum]], colWidths=[8*cm, 6.5*cm, 4*cm])
+        table = Table([["", p_left, p_right, img_impressum]], colWidths=[0.21*cm, 8*cm, 6.5*cm, 3.29*cm])
         table.setStyle(TableStyle([
             ('VALIGN',       (0, 0), (-1, -1), 'TOP'),
-            ('ALIGN',        (2, 0), (2, 0),   'RIGHT'),
+            ('ALIGN',        (3, 0), (3, 0),   'RIGHT'),
             ('LEFTPADDING',  (0, 0), (-1, -1), 0),
             ('RIGHTPADDING', (0, 0), (-1, -1), 0),
         ]))
@@ -650,7 +664,6 @@ class ReportGenerator:
 
         # --- SEITE 1: Einführungsseite ---
         story.extend(self._create_intro_page(patient_meta))
-        story.append(PageBreak())
 
         plot_dict = {os.path.basename(p): p for p in plot_files}
 
@@ -686,7 +699,7 @@ class ReportGenerator:
                     ref_style = self.styles['ReferenceDummy'] if is_dummy else self.styles['ReferenceNormal']
                     block.append(Paragraph(reference, ref_style))
 
-                block.append(Spacer(1, 0.4*cm))
+                block.append(Spacer(1, 0.2*cm))
                 story.append(KeepTogether(block))
 
             # Maturity Block nach der Anthropometrie (erste Sektion)
