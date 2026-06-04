@@ -60,7 +60,11 @@ class Analyzer:
                 print(f"   [❌ DEBUG ANALYZER] Fehler bei Patient {patient_id}: Weder 'crf_timestamp' noch 'parq_timestamp' enthalten gültige Werte!")
 
             mess_dates = self._parse_dates(combined_ts)
-            geb_str = str(p_df['crf_geb'].iloc[0])
+            
+            # Finde das erste gültige Geburtsdatum (egal bei welchem Messzeitpunkt)
+            valid_geb = p_df['crf_geb'].dropna()
+            geb_str = str(valid_geb.iloc[0]) if not valid_geb.empty else ""
+            
             geb_date = pd.to_datetime(geb_str, errors='coerce')
             
             if pd.notna(geb_date):
