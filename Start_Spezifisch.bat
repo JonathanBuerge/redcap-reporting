@@ -10,10 +10,27 @@ cd /d "%~dp0"
 set /p IDs="Bitte die Record-IDs eingeben (mit Leerzeichen getrennt, z.B. decad_101 decad_105): "
 set /p LANG="Sprache (de/en, Enter fuer de): "
 if "%LANG%"=="" set LANG=de
+set /p MZP="MZP (optional, z.B. 3 fuer MZP3): "
+set MZP_ARG=
+if not "%MZP%"=="" set MZP_ARG=--mzp %MZP%
+
 echo.
-echo Starte Verarbeitung fuer: %IDs% (Sprache: %LANG%)
+if not "%MZP%"=="" (
+    echo Starte Verarbeitung fuer: %IDs% ^(Sprache: %LANG%, MZP erzwingen: %MZP%^)
+) else (
+    echo Starte Verarbeitung fuer: %IDs% ^(Sprache: %LANG%^)
+)
 echo.
-python src\main.py --ids %IDs% --lang %LANG%
+
+if not exist ".venv\" (
+    echo Erstelle virtuelle Umgebung und installiere Pakete ^(einmaliger Vorgang^)...
+    python -m venv .venv
+    .venv\Scripts\pip install -r requirements.txt
+    echo Installation abgeschlossen!
+    echo.
+)
+
+.venv\Scripts\python src\main.py --ids %IDs% --lang %LANG% %MZP_ARG%
 echo.
 if %ERRORLEVEL% neq 0 (
     echo FEHLER! Das Programm wurde mit einem Fehler beendet.

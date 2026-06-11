@@ -4,7 +4,10 @@ import numpy as np
 from reference_data import (
     get_pmax_mass_reference, get_vo2max_reference, PMAX_ABS_DATA,
     MTP_REL_DATA, MTP_ABS_DATA, KNEE_EXT_ABS_HEBERT, KNEE_EXT_REL_HEBERT, HANDGRIP_DOM_BOHANNON, get_relative_handgrip_bohannon, HEIGHT_DATA, WEIGHT_DATA,
-    get_jump_height_reference, get_smoothed_reference
+    get_jump_height_reference, get_smoothed_reference,
+    get_dxa_bodyfat_reference,
+    get_dxa_bmd_reference,
+    INBODY_BF_KOREA_MEAN_SD, get_inbody_bodyfat_reference
 )
 
 class Visualizer:
@@ -51,6 +54,14 @@ class Visualizer:
                 'groesse_ylabel':       'Grösse (cm)',
                 'gewicht_title':        'Körpergewicht',
                 'gewicht_ylabel':       'Gewicht (kg)',
+                # body composition
+                'koerperfett_dxa_title':   'Körperfettanteil (DXA)',
+                'koerperfett_dxa_ylabel':  'Körperfettanteil (%)',
+                'koerperfett_inbody_title':'Körperfettanteil (InBody)',
+                'koerperfett_inbody_ylabel':'Körperfettanteil (%)',
+                'knochendichte_title':     'Knochendichte (DXA)',
+                'knochendichte_ylabel':    'BMD (g/cm²)',
+                'inbody_ref_note':         'Referenz: Ø ± 1SD (7–12 J., InBody 230) – keine altersaufgelöste Norm verfügbar',
                 # maturity plot
                 'mat_phv_label':    'Wachstumsschub (PHV)',
                 'mat_status_in':    'Mitten im Schub',
@@ -94,6 +105,14 @@ class Visualizer:
                 'groesse_ylabel':       'Height (cm)',
                 'gewicht_title':        'Body Weight',
                 'gewicht_ylabel':       'Weight (kg)',
+                # body composition
+                'koerperfett_dxa_title':   'Body Fat % (DXA)',
+                'koerperfett_dxa_ylabel':  'Body Fat (%)',
+                'koerperfett_inbody_title':'Body Fat % (InBody)',
+                'koerperfett_inbody_ylabel':'Body Fat (%)',
+                'knochendichte_title':     'Bone Mineral Density (DXA)',
+                'knochendichte_ylabel':    'BMD (g/cm²)',
+                'inbody_ref_note':         'Reference: Mean ± 1SD (age 7–12 yrs, InBody 230) – no age-specific norm available',
                 # maturity plot
                 'mat_phv_label':    'Growth Spurt (PHV)',
                 'mat_status_in':    'Currently at Peak',
@@ -231,6 +250,27 @@ class Visualizer:
                 for i, p in enumerate(p_names):
                     percentiles_data[p].append(vals[i])
 
+        elif metric_type == 'koerperfett_dxa':
+            title = f"{vt['koerperfett_dxa_title']} ({sex_label})"
+            ylabel = vt['koerperfett_dxa_ylabel']
+            for age in ages:
+                refs = get_dxa_bodyfat_reference(age, sex)
+                for p in refs: percentiles_data[p].append(refs[p])
+
+        elif metric_type == 'koerperfett_inbody':
+            title = f"{vt['koerperfett_inbody_title']} ({sex_label})"
+            ylabel = vt['koerperfett_inbody_ylabel']
+            for age in ages:
+                refs = get_inbody_bodyfat_reference(age, sex)
+                for p in refs: percentiles_data[p].append(refs[p])
+
+        elif metric_type == 'knochendichte':
+            title = f"{vt['knochendichte_title']} ({sex_label})"
+            ylabel = vt['knochendichte_ylabel']
+            for age in ages:
+                refs = get_dxa_bmd_reference(age, sex)
+                for p in refs: percentiles_data[p].append(refs[p])
+
         # --- ZEICHNEN DER REFERENZKURVEN ---
         for p_name in ['P3', 'P10', 'P25', 'P75', 'P90', 'P97', 'P50']:
             y_vals = percentiles_data[p_name]
@@ -258,7 +298,7 @@ class Visualizer:
         plt.grid(True, which='both', linestyle=':', alpha=0.6)
         plt.xlim(5.5, 19.5)
         plt.tight_layout()
-        plt.savefig(output_path, dpi=150)
+        plt.savefig(output_path, dpi=150, transparent=False, facecolor='white')
         plt.close()
     def create_maturity_plot(self, history, sex, output_path):
         """Erstellt eine Visualisierung für den Reifegrad-Verlauf (Mirwald)."""
@@ -313,7 +353,7 @@ class Visualizer:
         plt.grid(True, linestyle=':', alpha=0.6)
         
         plt.tight_layout()
-        plt.savefig(output_path, dpi=150)
+        plt.savefig(output_path, dpi=150, transparent=False, facecolor='white')
         plt.close()
 
     def create_overview_plot(self, metric_type, all_patients_histories, sex, output_path):
@@ -417,6 +457,25 @@ class Visualizer:
             for age in ages:
                 vals = get_smoothed_reference(age, sex, WEIGHT_DATA)
                 for i, p in enumerate(p_names): percentiles_data[p].append(vals[i])
+
+        elif metric_type == 'koerperfett_dxa':
+            title, ylabel = f"{vt['koerperfett_dxa_title']} {all_sfx} ({sex_label})", vt['koerperfett_dxa_ylabel']
+            for age in ages:
+                refs = get_dxa_bodyfat_reference(age, sex)
+                for p in refs: percentiles_data[p].append(refs[p])
+
+        elif metric_type == 'koerperfett_inbody':
+            title, ylabel = f"{vt['koerperfett_inbody_title']} {all_sfx} ({sex_label})", vt['koerperfett_inbody_ylabel']
+            for age in ages:
+                refs = get_inbody_bodyfat_reference(age, sex)
+                for p in refs: percentiles_data[p].append(refs[p])
+
+        elif metric_type == 'knochendichte':
+            title, ylabel = f"{vt['knochendichte_title']} {all_sfx} ({sex_label})", vt['knochendichte_ylabel']
+            for age in ages:
+                refs = get_dxa_bmd_reference(age, sex)
+                for p in refs: percentiles_data[p].append(refs[p])
+
         else:
             plt.close(fig)
             return
@@ -455,5 +514,5 @@ class Visualizer:
                       borderaxespad=0, title=vt['patients_legend'], title_fontsize=8)
 
         fig.tight_layout()
-        fig.savefig(output_path, dpi=150, bbox_inches='tight')
+        fig.savefig(output_path, dpi=150, bbox_inches='tight', transparent=False, facecolor='white')
         plt.close(fig)

@@ -14,16 +14,32 @@ echo "Beispiel: decad_101 decad_105 decad_112"
 echo ""
 read -p "IDs: " IDS_INPUT
 read -p "Sprache (de/en, Standard: de): " LANG_INPUT
+read -p "MZP (optional, z.B. 3 für MZP3): " MZP_INPUT
 
 if [ -z "$LANG_INPUT" ]; then
     LANG_INPUT="de"
 fi
 
-echo ""
-echo "Starte Verarbeitung für: $IDS_INPUT (Sprache: $LANG_INPUT)"
+MZP_ARG=""
+if [ -n "$MZP_INPUT" ]; then
+    MZP_ARG="--mzp $MZP_INPUT"
+    echo ""
+    echo "Starte Verarbeitung für: $IDS_INPUT (Sprache: $LANG_INPUT, MZP erzwingen: $MZP_INPUT)"
+else
+    echo ""
+    echo "Starte Verarbeitung für: $IDS_INPUT (Sprache: $LANG_INPUT)"
+fi
 echo ""
 
-python3 src/main.py --ids $IDS_INPUT --lang $LANG_INPUT
+if [ ! -d ".venv" ]; then
+    echo "Erstelle virtuelle Umgebung und installiere Pakete (einmaliger Vorgang)..."
+    python3 -m venv .venv
+    .venv/bin/pip install -r requirements.txt
+    echo "Installation abgeschlossen!"
+    echo ""
+fi
+
+.venv/bin/python src/main.py --ids $IDS_INPUT --lang $LANG_INPUT $MZP_ARG
 
 echo ""
 if [ $? -ne 0 ]; then

@@ -50,19 +50,21 @@ Das System unterstützt Berichte auf **Deutsch** (`de`) und **Englisch** (`en`).
 Sobald in den REDCap-Metadaten deines Projekts das Feld `language` mit den Werten `de` oder `en` befüllt ist, liest das System die bevorzugte Sprache des Patienten aus und generiert den Bericht vollautomatisch in der passenden Sprache.
 
 ### B. Manuelle Eingabe (Spezifisch)
-Wenn du `Start_Spezifisch` ausführst, wirst du nach der Eingabe der IDs gefragt, in welcher Sprache die Berichte generiert werden sollen:
+Wenn du `Start_Spezifisch` ausführst, wirst du nach der Eingabe der IDs gefragt, in welcher Sprache die Berichte generiert werden sollen und ob ein spezifischer Messzeitpunkt (MZP) für den Upload erzwungen werden soll:
 ```text
 IDs: decad_105 decad_143
 Sprache (de/en, Standard: de): en
+MZP (optional, z.B. 3 für MZP3): 3
 ```
-* **Enter:** Erzeugt den Bericht auf Deutsch (Standard).
+* **Enter bei Sprache:** Erzeugt den Bericht auf Deutsch (Standard).
 * **en:** Erzeugt den Bericht auf Englisch.
+* **MZP Angabe:** Wenn hier z. B. `3` eingegeben wird, lädt das System das fertige PDF direkt in das Event `mzp3_arm_1` hoch – unabhängig davon, ob das Formular in REDCap bereits als "Complete" markiert wurde. Wird nichts eingegeben, sucht das System wie gewohnt nach dem zuletzt abgeschlossenen Event.
 
 ### C. Über die Kommandozeile
-Entwickler können die Sprache direkt beim Ausführen der `main.py` übergeben. Dies überschreibt temporär alle REDCap-Metadaten:
+Entwickler können Parameter direkt beim Ausführen der `main.py` übergeben. Dies überschreibt temporär alle REDCap-Metadaten:
 ```bash
-# Erzeugt den Bericht für decad_105 auf Englisch
-.venv/bin/python src/main.py --ids decad_105 --lang en
+# Erzeugt den Bericht für decad_105 auf Englisch und erzwingt Upload auf MZP3
+.venv/bin/python src/main.py --ids decad_105 --lang en --mzp 3
 ```
 
 ---

@@ -13,7 +13,9 @@ class Analyzer:
             "vo2max": "crf_vo2max",
             "leistung": "crf_pmax",
             "groesse": "crf_height",
-            "gewicht": "crf_weight"
+            "gewicht": "crf_weight",
+            "koerperfett": "crf_bf",           # Körperfettanteil (%)
+            "knochendichte": "crf_bmd",        # Knochendichte (BMD g/cm²)
         }
         self.leg_cols = ["crf_isom_max1", "crf_isom_max2", "crf_isom_max3"]
 
@@ -121,6 +123,23 @@ class Analyzer:
             }
         }
 
+        # --- Körperzusammensetzung: Messmethode aus Checkboxen lesen ---
+        # crf_bodycomp___1=1 -> DXA, crf_bodycomp___2=1 -> InBody,
+        # crf_bodycomp___3=1 -> Other (kein Standard-Report), alle 0 -> keine Messung
+        bodycomp_method = None
+        for suffix, method_name in [('1', 'dxa'), ('2', 'inbody'), ('3', 'other')]:
+            col = f'crf_bodycomp___{suffix}'
+            if col in p_df.columns:
+                vals = p_df[col].dropna()
+                if not vals.empty:
+                    try:
+                        if int(float(vals.iloc[-1])) == 1:
+                            bodycomp_method = method_name
+                            break
+                    except (ValueError, TypeError):
+                        pass
+        results["meta"]["bodycomp_method"] = bodycomp_method  # 'dxa', 'inbody', 'other', or None
+
         # --- 2. Beinstrecker vorbereiten (ABSOLUT) ---
         valid_leg_cols = [c for c in self.leg_cols if c in p_df.columns]
         if valid_leg_cols:
@@ -169,6 +188,8 @@ class Analyzer:
             mat_temp_df['sh_num'] = self._safe_numeric(mat_temp_df['crf_sitting_height'])
             
             # Korrektur der Sitzhöhe (gemessen auf Hocker von 46 cm Höhe)
+            # HINWEIS: Die Mirwald-Schätzung ist für < 10 Jahre unplausibel (Schätzfehler nimmt zu).
+            # Die <10-Sonderbehandlung wird hier im Code dennoch beibehalten (numerische Stabilität).
             def _correct_sh(x):
                 if pd.isna(x): return x
                 return x - 46.0 if x > 10 else x - 0.46

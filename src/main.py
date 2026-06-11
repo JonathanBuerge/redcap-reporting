@@ -21,7 +21,7 @@ REPORTS_BASE = "./reports"
 # unabhängig vom gewählten Modus (--auto, --ids oder interaktiv).
 # Wenn alles getestet ist und der Vollbetrieb starten soll: Liste leeren → []
 # ─────────────────────────────────────────────────────────────────────────────
-DEV_IDS: list[str] = ["decad_105", "decad_143", "decad_108", "decad_155", "decad_134"]
+DEV_IDS: list[str] = []
 
 # Schalter für Übersichtsberichte (Sammelt alle Daten der CSV für einen Gruppen-Plot)
 GENERATE_OVERVIEW: bool = True
@@ -64,14 +64,14 @@ def fetch_pending_records_from_redcap() -> list:
     logging.info("API Check: Suche in REDCap nach neuen, unberichteten Messungen...")
     return get_pending_reports()
 
-def push_report_to_redcap(patient_id: str, file_path: str) -> None:
+def push_report_to_redcap(patient_id: str, file_path: str, mzp: str = None) -> None:
     """Lädt das fertige PDF in das korrekte REDCap-Event des Patienten hoch."""
-    success = upload_report_to_redcap(patient_id, file_path)
+    success = upload_report_to_redcap(patient_id, file_path, mzp)
     if not success:
         logging.warning("Patient %s: REDCap Upload nicht erfolgreich.", patient_id)
 
 # ============================================================
-# TODO: LÖSCHEN – DEV-Hilfsfunktion für PHV-Übersichtstabelle
+# DEV-Hilfsfunktion für PHV-Übersichtstabelle
 # und Scatter-Plots (effektives Alter vs. biologisches Alter,
 # Eq1/2 vs Eq3/4 Vergleich)
 # ============================================================
@@ -210,7 +210,7 @@ def _dev_build_phv_content(patients_for_sex: list, sex: str, tmp_dir: str):
     rows.append(avg_cells)
 
     story_elements.append(Paragraph(
-        f"<b>TODO: LÖSCHEN – PHV-Daten ({'Mädchen' if sex == 'girls' else 'Jungs'})</b>",
+        f"<b>PHV-Daten ({'Mädchen' if sex == 'girls' else 'Jungs'})</b>",
         styles['Heading2']
     ))
     story_elements.append(Spacer(1, 0.3*cm))
@@ -268,7 +268,7 @@ def _dev_build_phv_content(patients_for_sex: list, sex: str, tmp_dir: str):
         fig, ax = plt.subplots(figsize=(8, 5))
         _scatter_base(ax, scatter_chron, scatter_bio_eq34,
                       'Effektives Alter (J.)', 'Biologisches Alter Eq3/4 (J.)',
-                      f'TODO: LÖSCHEN – Eff. vs. Bio. Alter Eq3/4 ({sex_label_text})')
+                      f'Eff. vs. Bio. Alter Eq3/4 ({sex_label_text})')
         p = os.path.join(tmp_dir, f"phv_scatter_eq34_{sex}.png")
         fig.tight_layout(); fig.savefig(p, dpi=120); plt.close(fig)
         scatter_paths.append(p)
@@ -278,7 +278,7 @@ def _dev_build_phv_content(patients_for_sex: list, sex: str, tmp_dir: str):
         fig, ax = plt.subplots(figsize=(8, 5))
         _scatter_base(ax, scatter_chron, scatter_bio_eq12,
                       'Effektives Alter (J.)', 'Biologisches Alter Eq1/2 (J.)',
-                      f'TODO: LÖSCHEN – Eff. vs. Bio. Alter Eq1/2 ({sex_label_text})')
+                      f'Eff. vs. Bio. Alter Eq1/2 ({sex_label_text})')
         p = os.path.join(tmp_dir, f"phv_scatter_eq12_{sex}.png")
         fig.tight_layout(); fig.savefig(p, dpi=120); plt.close(fig)
         scatter_paths.append(p)
@@ -294,7 +294,7 @@ def _dev_build_phv_content(patients_for_sex: list, sex: str, tmp_dir: str):
         ax.plot([lo, hi], [lo, hi], 'k--', lw=1, label='Eq1/2 = Eq3/4')
         ax.set_xlabel('Biologisches Alter Eq3/4 (J.)')
         ax.set_ylabel('Biologisches Alter Eq1/2 (J.)')
-        ax.set_title(f'TODO: LÖSCHEN – Eq1/2 vs. Eq3/4 Vergleich ({sex_label_text})')
+        ax.set_title(f'Eq1/2 vs. Eq3/4 Vergleich ({sex_label_text})')
         ax.legend(fontsize=7)
         ax.grid(True, alpha=0.3)
         p = os.path.join(tmp_dir, f"phv_scatter_cmp_{sex}.png")
@@ -303,7 +303,7 @@ def _dev_build_phv_content(patients_for_sex: list, sex: str, tmp_dir: str):
 
     return story_elements, scatter_paths
 # ============================================================
-# ENDE TODO: LÖSCHEN
+# ENDE DEV-Hilfsfunktionen
 # ============================================================
 
 
@@ -317,6 +317,8 @@ def main():
     parser.add_argument("--auto", action="store_true", help="Automatisch neue Messungen aus REDCap ermitteln")
     parser.add_argument("--ids", nargs="+", help="Spezifische IDs manuell verarbeiten (z.B. --ids 101 105)")
     parser.add_argument("--lang", type=str, default=None, choices=["de", "en"], help="Sprache für die Berichte (überschreibt REDCap-Metadaten)")
+    parser.add_argument("--mzp", type=str, default=None, help="Optional: Spezifischer Messzeitpunkt (z.B. 3) für den Upload, ignoriert crf_complete")
+    parser.add_argument("--no-upload", action="store_true", help="Verhindert den Upload der PDFs zu REDCap (nur lokal speichern)")
     args = parser.parse_args()
 
     # 2. Zu verarbeitende IDs ermitteln
@@ -338,10 +340,33 @@ def main():
         print("[2] Manuell (Bestimmte IDs eingeben)")
         wahl = input("Eingabe (1 oder 2): ")
         if wahl == "1":
+            args.auto = True
             patient_ids_to_process = fetch_pending_records_from_redcap()
         elif wahl == "2":
-            ids_input = input("Bitte IDs kommagetrennt eingeben (z.B. 101, 105): ")
-            patient_ids_to_process = [x.strip() for x in ids_input.split(",") if x.strip()]
+            ids_input = input("Bitte IDs eingeben (mit Leerzeichen oder Komma getrennt, z.B. decad_101 decad_105): ")
+            raw_ids = [x.strip() for x in ids_input.replace(',', ' ').split() if x.strip()]
+            patient_ids_to_process = []
+            for raw_id in raw_ids:
+                if raw_id.isdigit():
+                    patient_ids_to_process.append(f"decad_{raw_id}")
+                elif raw_id.startswith("decade_"):
+                    patient_ids_to_process.append(raw_id.replace("decade_", "decad_"))
+                else:
+                    patient_ids_to_process.append(raw_id)
+            
+            lang_input = input("Sprache (de/en, Standard: de): ").strip()
+            if lang_input in ["de", "en"]:
+                args.lang = lang_input
+            else:
+                args.lang = "de"
+                
+            mzp_input = input("MZP (optional, z.B. 3 für MZP3): ").strip()
+            if mzp_input:
+                args.mzp = mzp_input
+                
+            upload_input = input("Soll das PDF in REDCap hochgeladen werden? (j/n, Standard: j): ").strip().lower()
+            if upload_input in ["n", "nein"]:
+                args.no_upload = True
         else:
             logging.error("Ungültige Eingabe.")
             return
@@ -376,7 +401,7 @@ def main():
     dev_overview: dict[str, list] = {'girls': [], 'boys': []}
 
     # --- NEU: Daten für Übersicht sammeln (ALLE Patienten aus der CSV) ---
-    if GENERATE_OVERVIEW:
+    if GENERATE_OVERVIEW and args.auto:
         logging.info("Sammle Daten für Übersichts-Plots (alle Patienten)...")
         all_ids_in_csv = analyzer.get_all_patient_ids()
         for p_id in all_ids_in_csv:
@@ -440,6 +465,41 @@ def main():
             except Exception as e:
                 logging.error(f"Patient {str_id}: Fehler bei Maturity-Plot: {e}")
 
+        # Körperzusammensetzungs-Plots (konditionell je nach Messmethode)
+        bodycomp_method = metrics_data.get("meta", {}).get("bodycomp_method")
+        bodycomp_plots = []
+        if bodycomp_method == 'dxa':
+            bodycomp_plots = [
+                ("koerperfett_dxa",  "koerperfett_dxa_abs.png"),
+                ("knochendichte",     "knochendichte_abs.png"),
+            ]
+        elif bodycomp_method == 'inbody':
+            bodycomp_plots = [
+                ("koerperfett_inbody", "koerperfett_inbody_abs.png"),
+            ]
+
+        for metric_key, filename in bodycomp_plots:
+            # Nutze 'koerperfett' als Histiorienschlüssel für beide fat-Varianten
+            hist_key = 'koerperfett'
+            hist_data = metrics_data.get(hist_key, {}).get("history", [])
+            if metric_key == 'knochendichte':
+                hist_data = metrics_data.get('knochendichte', {}).get("history", [])
+
+            if hist_data and p_age is not None:
+                plot_path = f"{plots_dir}/{filename}"
+                try:
+                    viz.create_reference_plot(metric_key, hist_data, p_sex, plot_path)
+                    if os.path.exists(plot_path):
+                        plot_files.append(plot_path)
+                    else:
+                        logging.error(f"Patient {str_id}: Body-Comp-Plot nicht gefunden: {plot_path}")
+                except Exception as e:
+                    logging.error(f"Patient {str_id}: CRASH bei {metric_key}-Plot. Grund: {e}")
+                    logging.debug(traceback.format_exc())
+            else:
+                grund = "Alter fehlt" if p_age is None else "Keine validen Historien-Daten"
+                logging.info(f"Patient {str_id}: Überspringe {metric_key}-Plot ({grund})")
+
         # PDF Generierung & Upload
         report_file = f"{patient_dir}/report.pdf"
         lang = args.lang if args.lang else metrics_data["meta"].get("language", "de")
@@ -450,8 +510,11 @@ def main():
             logging.info(f"Patient {str_id}: PDF erfolgreich generiert ({report_file})")
             
             # ---> REDCap Upload anstoßen <---
-            push_report_to_redcap(str_id, report_file)
-            logging.info(f"Patient {str_id}: Upload-Job für REDCap gesendet.")
+            if not args.no_upload:
+                push_report_to_redcap(str_id, report_file, args.mzp)
+                logging.info(f"Patient {str_id}: Upload-Job für REDCap gesendet.")
+            else:
+                logging.info(f"Patient {str_id}: Upload übersprungen (--no-upload aktiv).")
             
         except Exception as e:
             logging.error(f"Patient {str_id}: Fehler beim PDF-Bau. Grund: {e}")
@@ -461,7 +524,7 @@ def main():
     logging.info("="*50)
 
     # 5. Übersichtsreports pro Geschlecht erstellen
-    if GENERATE_OVERVIEW:
+    if GENERATE_OVERVIEW and args.auto:
         logging.info("="*50)
         logging.info("🔍 Erstelle Gruppen-Übersichtsreports...")
         overview_base = os.path.join(REPORTS_BASE, "_dev_overview")
@@ -501,6 +564,33 @@ def main():
                     logging.error("  Übersicht '%s': Fehler bei %s-Plot: %s", sex, metric_key, e)
                     logging.debug(traceback.format_exc())
 
+            # Körperzusammensetzungs-Übersichtsplots
+            for ov_key, ov_file, hist_source, req_method in [
+                ('koerperfett_dxa',    'koerperfett_dxa_abs.png',    'koerperfett',   'dxa'),
+                ('knochendichte',      'knochendichte_abs.png',      'knochendichte', 'dxa'),
+                ('koerperfett_inbody', 'koerperfett_inbody_abs.png', 'koerperfett',   'inbody'),
+            ]:
+                all_histories = []
+                for p_id, mdata in patients_for_sex:
+                    method = mdata.get("meta", {}).get("bodycomp_method")
+                    if method != req_method:
+                        continue
+                    
+                    # Patienten vorübergehend von DXA ausschließen
+                    #if req_method == 'dxa' and p_id in ['decad_116', 'decad_137', 'decad_141', 'decad_134']:
+                    #    continue
+
+                    hist = mdata.get(hist_source, {}).get("history", [])
+                    all_histories.append((p_id, hist, None))
+                ov_path = os.path.join(plots_dir, ov_file)
+                try:
+                    viz.create_overview_plot(ov_key, all_histories, sex, ov_path)
+                    if os.path.exists(ov_path):
+                        overview_plot_files.append(ov_path)
+                except Exception as e:
+                    logging.error("  Übersicht '%s': Fehler bei %s-Plot: %s", sex, ov_key, e)
+                    logging.debug(traceback.format_exc())
+
             # Übersichts-PDF bauen (eine Seite pro Plot, kein Patient-Header)
             overview_pdf = os.path.join(overview_base, f"overview_{sex_label}.pdf")
             try:
@@ -517,12 +607,30 @@ def main():
                 title_text = f"DEV-Übersicht: {'Mädchen' if sex == 'girls' else 'Jungs'} ({len(patients_for_sex)} Patienten)"
                 story.append(Paragraph(title_text, styles['Title']))
                 story.append(Spacer(1, 0.5*cm))
+                
+                note_text = ("<font color='red'><b>Hinweis:</b> Die Patienten 116, 137, 134 und 141 wurden aus den DXA-Plots "
+                             "(Körperfett & Knochendichte) vorübergehend ausgeschlossen. "
+                             "Sie werden nach der Korrektur ihrer Werte wieder hinzugefügt.</font>")
+                story.append(Paragraph(note_text, styles['Normal']))
+                story.append(Spacer(1, 0.5*cm))
+
+                # Übersicht-Plots in die richtige Reihenfolge bringen (passend zum Patienten-Report)
+                plot_order = [
+                    "groesse_abs.png", "gewicht_abs.png",
+                    "koerperfett_dxa_abs.png", "knochendichte_abs.png", "koerperfett_inbody_abs.png",
+                    "handkraft_abs.png", "handkraft_rel.png",
+                    "sprung_abs.png", "sprung_rel.png",
+                    "kreuzheben_abs.png", "kreuzheben_rel.png",
+                    "beinstrecker_abs.png", "beinstrecker_rel.png",
+                    "vo2max_abs.png", "leistung_abs.png"
+                ]
+                overview_plot_files.sort(key=lambda x: plot_order.index(os.path.basename(x)) if os.path.basename(x) in plot_order else 999)
 
                 for plot_path in overview_plot_files:
                     story.append(Image(plot_path, width=18*cm, height=11*cm))
                     story.append(Spacer(1, 0.5*cm))
 
-                # --- TODO: LÖSCHEN – PHV-Tabelle + Scatter ---
+                # --- PHV-Tabelle + Scatter ---
                 phv_story, scatter_paths = _dev_build_phv_content(
                     patients_for_sex, sex, overview_base
                 )
@@ -532,7 +640,7 @@ def main():
                     if sp and os.path.exists(sp):
                         story.append(RLImage(sp, width=17*cm, height=10*cm))
                         story.append(Spacer(1, 0.5*cm))
-                # --- ENDE TODO: LÖSCHEN ---
+                # --- ENDE PHV-Tabelle + Scatter ---
 
 
                 doc.build(story)

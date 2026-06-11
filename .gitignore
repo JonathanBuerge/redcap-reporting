@@ -8,3 +8,10 @@ __pycache__/
 decade_log.txt
 *.log
 *.txt
+
+# PyInstaller
+build/
+dist/
+*.spec
+DECADE_Reporting_Mac
+DECADE_Reporting.exe

@@ -1,6 +1,42 @@
 import math
 import numpy as np
 
+# ---------------------------------------------------------------------------
+# ARM-SWING CORRECTION FACTOR
+# ---------------------------------------------------------------------------
+# The Šumník et al. reference data for jump height (Hmax) and relative power
+# (Pmax/mass) were collected WITH arm swing.  Our study measurements are
+# performed WITHOUT arm use.  To allow a fair comparison the normative
+# percentile values are scaled down by this factor before being passed to the
+# report.
+#
+# Literature reference for the magnitude of the arm-swing effect:
+#   Hara et al. (2006), J Biomech – arm swing adds ≈ 10–15 % to jump height.
+#   Lees et al. (2004), J Sports Sci – similar magnitude for power.
+#
+# Current value: 0.90  (= −10 %).  Adjust as needed once the definitive
+# correction factor has been established.
+ARM_SWING_CORRECTION_FACTOR: float = 0.90
+
+def get_smoothed_reference(age, sex, data_dict):
+    data = data_dict.get(sex, data_dict.get('boys', {}))
+    if not data:
+        return [np.nan] * 7
+    ages = sorted(data.keys())
+    a = max(min(age, max(ages)), min(ages))
+    
+    a_low = max([k for k in ages if k <= a])
+    a_high = min([k for k in ages if k >= a])
+    
+    if a_low == a_high:
+        vals = data[a_low]
+    else:
+        w = (a - a_low) / (a_high - a_low)
+        v_low = np.array(data[a_low])
+        v_high = np.array(data[a_high])
+        vals = v_low + w * (v_high - v_low)
+    return vals
+
 # ---------------------------------------------------------
 # 1. Sprunghöhe (Hmax in cm) - LMS-Parameter nach Sumnik et al.
 # Tabelle 10: S2LJ Hmax. L wurde konstant auf 0.5 gesetzt.
@@ -42,24 +78,32 @@ JUMP_HEIGHT_SMOOTH = {
 }
 
 def get_jump_height_reference(age, sex):
-    """Berechnet geglättete Perzentilen P3-P97 für Hmax (cm)."""
+    """Berechnet geglättete Perzentilen P3-P97 für Hmax (cm).
+
+    Die Referenzwerte (Šumník et al.) wurden MIT Armschwung erhoben.  Da
+    unsere Messungen OHNE Armeinsatz erfolgen, werden alle Perzentilwerte
+    mit ARM_SWING_CORRECTION_FACTOR multipliziert.
+    """
     data = JUMP_HEIGHT_SMOOTH.get(sex, JUMP_HEIGHT_SMOOTH['boys'])
     ages = sorted(data.keys())
     a = max(min(age, max(ages)), min(ages))
-    
+
     a_low = max([k for k in ages if k <= a])
     a_high = min([k for k in ages if k >= a])
-    
+
     if a_low == a_high:
-        vals = data[a_low]
+        vals = np.array(data[a_low])
     else:
         w = (a - a_low) / (a_high - a_low)
         v_low = np.array(data[a_low])
         v_high = np.array(data[a_high])
         vals = v_low + w * (v_high - v_low)
-        
+
+    # Apply arm-swing correction before returning
+    vals = vals * ARM_SWING_CORRECTION_FACTOR
+
     p_names = ['P3', 'P10', 'P25', 'P50', 'P75', 'P90', 'P97']
-    return {p: vals[i] for i, p in enumerate(p_names)}
+    return {p: float(vals[i]) for i, p in enumerate(p_names)}
 
 # ---------------------------------------------------------
 # 2. Relative Max Power (Sprung: Pmax/mass in W/kg)
@@ -97,10 +141,17 @@ PMAX_MASS_SMOOTH = {
 }
 
 def get_pmax_mass_reference(age, sex):
-    """Berechnet geglättete Perzentilen P3-P97 für Pmax/mass (W/kg)."""
-    vals = get_smoothed_reference(age, sex, PMAX_MASS_SMOOTH)
+    """Berechnet geglättete Perzentilen P3-P97 für Pmax/mass (W/kg).
+
+    Die Referenzwerte (Šumník et al.) wurden MIT Armschwung erhoben.  Da
+    unsere Messungen OHNE Armeinsatz erfolgen, werden alle Perzentilwerte
+    mit ARM_SWING_CORRECTION_FACTOR multipliziert.
+    """
+    vals = np.array(get_smoothed_reference(age, sex, PMAX_MASS_SMOOTH))
+    # Apply arm-swing correction before returning
+    vals = vals * ARM_SWING_CORRECTION_FACTOR
     p_names = ['P3', 'P10', 'P25', 'P50', 'P75', 'P90', 'P97']
-    return {p: vals[i] for i, p in enumerate(p_names)}
+    return {p: float(vals[i]) for i, p in enumerate(p_names)}
 
 # ---------------------------------------------------------
 # 3. VO2max (Relative Ausdauer in mL/kg/min)
@@ -321,24 +372,7 @@ HANDGRIP_DOM_BOHANNON = {
     }
 }
 
-def get_smoothed_reference(age, sex, data_dict):
-    data = data_dict.get(sex, data_dict.get('boys', {}))
-    if not data:
-        return [np.nan] * 7
-    ages = sorted(data.keys())
-    a = max(min(age, max(ages)), min(ages))
-    
-    a_low = max([k for k in ages if k <= a])
-    a_high = min([k for k in ages if k >= a])
-    
-    if a_low == a_high:
-        vals = data[a_low]
-    else:
-        w = (a - a_low) / (a_high - a_low)
-        v_low = np.array(data[a_low])
-        v_high = np.array(data[a_high])
-        vals = v_low + w * (v_high - v_low)
-    return vals
+
 
 # Dynamische Normalisierung für relative Werte (kg/kg)
 def get_relative_handgrip_bohannon(age, sex, weight_kg):
@@ -393,3 +427,225 @@ WEIGHT_DATA = {
         18: (57.0, 61.0, 66.5, 73.5, 81.5, 90.5, 101.5)
     }
 }
+# ---------------------------------------------------------
+# ALTE WERTE (Ausgegraut) – Körperfettanteil (DXA) – Wohlfahrt-Veje et al. (2014)
+# BESCHREIBUNG: Referenzdaten für DXA %BF basierend auf 2647 dänischen Kindern.
+# HINWEIS: Originaldaten decken Alter 8-14 ab. Werte für 6-7 und 15-18 
+# wurden linear extrapoliert, um die Pipeline-Kompatibilität zu wahren.
+# QUELLE: Wohlfahrt-Veje et al., 2014, Eur J Clin Nutr. DOI: 10.1038/ejcn.2013.282
+# Struktur: { Alter: (L, M, S) }
+# ---------------------------------------------------------
+# DXA_BODY_FAT_LMS_DANISH = {
+#     'girls': {
+#         6:  (0.335, 21.860, 0.332),
+#         7:  (0.335, 21.933, 0.330),
+#         8:  (0.335, 22.006, 0.328),
+#         9:  (0.335, 22.079, 0.326),
+#         10: (0.335, 22.155, 0.323),
+#         11: (0.335, 22.210, 0.322),
+#         12: (0.335, 22.201, 0.319),
+#         13: (0.335, 22.236, 0.315),
+#         14: (0.335, 22.304, 0.310),
+#         15: (0.335, 22.372, 0.305),
+#         16: (0.335, 22.440, 0.300),
+#         17: (0.335, 22.508, 0.295),
+#         18: (0.335, 22.576, 0.290)
+#     },
+#     'boys': {
+#         6:  (0.066, 11.101, 0.285),
+#         7:  (0.080, 12.333, 0.305),
+#         8:  (0.094, 13.565, 0.325),
+#         9:  (0.108, 14.797, 0.345),
+#         10: (0.121, 16.477, 0.372),
+#         11: (0.135, 17.451, 0.408),
+#         12: (0.149, 17.728, 0.445),
+#         13: (0.162, 17.618, 0.475),
+#         14: (0.176, 17.159, 0.513),
+#         15: (0.190, 16.700, 0.551),
+#         16: (0.204, 16.241, 0.589),
+#         17: (0.218, 15.782, 0.627),
+#         18: (0.232, 15.323, 0.665)
+#     }
+# }
+
+# ---------------------------------------------------------
+# ALTE WERTE (Ausgegraut) – Körperfettanteil (DXA) – Dong et al. (2021)
+# BESCHREIBUNG: Referenzdaten für den Körperfettanteil (%BF) mit DXA,
+# basierend auf einer grossen chinesischen Kohorte (CCACH Studie).
+# QUELLE: Dong et al., 2021, Clinical Nutrition. DOI: 10.1016/j.clnu.2020.08.014
+# Struktur: { Alter: (L, M, S) }
+# ---------------------------------------------------------
+# DXA_BODY_FAT_LMS_DONG = { ... } (ausgelassen)
+
+# ---------------------------------------------------------
+# Koerperfettanteil (DXA) - de Groot et al. (2025)
+# BESCHREIBUNG: Referenzdaten fuer DXA %BF basierend auf der Generation R Studie 
+# (Niederlaendische/Europaeische Kohorte, N=6102). 
+# P3 und P97 wurden vorab aus P5/P95 berechnet.
+# QUELLE: de Groot et al., 2025, Eur J Endocrinol. DOI: 10.1093/ejendo/lvaf245
+# Struktur: { Alter: (P3, P10, P25, P50, P75, P90, P97) }
+# ---------------------------------------------------------
+DXA_BODY_FAT_PERCENTILES_DE_GROOT = {
+    'boys': {
+        5:  (16.57, 17.70, 18.86, 20.36, 22.29, 24.41, 26.59),
+        6:  (15.85, 17.37, 18.95, 21.06, 23.81, 26.84, 29.95),
+        7:  (15.10, 16.92, 18.83, 21.42, 24.87, 28.70, 32.60),
+        8:  (14.68, 16.64, 18.70, 21.55, 25.43, 29.73, 34.12),
+        9:  (14.60, 16.60, 18.72, 21.72, 25.86, 30.48, 35.16),
+        10: (14.67, 16.76, 18.97, 22.16, 26.66, 31.69, 36.77),
+        11: (14.65, 16.90, 19.29, 22.80, 27.84, 33.50, 39.20),
+        12: (14.35, 16.73, 19.26, 23.04, 28.58, 34.83, 41.08),
+        13: (13.65, 15.99, 18.48, 22.25, 27.88, 34.27, 40.65),
+        14: (12.51, 14.58, 16.78, 20.16, 25.31, 31.20, 37.03),
+        15: (11.49, 13.35, 15.33, 18.43, 23.23, 28.74, 34.19),
+        16: (10.83, 12.59, 14.47, 17.44, 22.14, 27.57, 32.91),
+        17: (10.52, 12.26, 14.12, 17.10, 21.89, 27.47, 32.94),
+        18: (10.51, 12.29, 14.19, 17.28, 22.34, 28.28, 34.06),
+        19: (10.71, 12.58, 14.59, 17.87, 23.36, 29.87, 36.17),
+        20: (11.04, 13.05, 15.21, 18.77, 24.85, 32.12, 39.12)
+    },
+    'girls': {
+        5:  (20.16, 21.49, 22.90, 24.85, 27.38, 29.99, 32.57),
+        6:  (19.14, 20.91, 22.78, 25.37, 28.70, 32.15, 35.57),
+        7:  (18.48, 20.62, 22.88, 25.98, 29.97, 34.08, 38.18),
+        8:  (18.40, 20.74, 23.21, 26.58, 30.91, 35.37, 39.82),
+        9:  (18.59, 21.01, 23.55, 27.01, 31.42, 35.99, 40.54),
+        10: (18.63, 21.06, 23.61, 27.08, 31.49, 36.05, 40.61),
+        11: (18.34, 20.80, 23.37, 26.84, 31.25, 35.80, 40.35),
+        12: (18.11, 20.58, 23.16, 26.64, 31.04, 35.59, 40.14),
+        13: (18.30, 20.78, 23.37, 26.85, 31.23, 35.76, 40.31),
+        14: (19.14, 21.62, 24.22, 27.69, 32.03, 36.53, 41.06),
+        15: (19.98, 22.48, 25.10, 28.56, 32.89, 37.39, 41.90),
+        16: (20.65, 23.18, 25.82, 29.31, 33.65, 38.16, 42.70),
+        17: (21.16, 23.74, 26.42, 29.95, 34.32, 38.87, 43.44),
+        18: (21.55, 24.18, 26.92, 30.49, 34.92, 39.52, 44.17),
+        19: (21.83, 24.53, 27.33, 30.97, 35.46, 40.13, 44.85),
+        20: (22.03, 24.80, 27.68, 31.40, 35.96, 40.72, 45.53)
+    }
+}
+
+def get_dxa_bodyfat_reference(age, sex):
+    """Holt die statisch berechneten DXA Koerperfett-Perzentilen (P3-P97)."""
+    vals = get_smoothed_reference(age, sex, DXA_BODY_FAT_PERCENTILES_DE_GROOT)
+    if math.isnan(vals[0]):
+        return {}
+    
+    p3, p10, p25, p50, p75, p90, p97 = vals
+    
+    return {
+        'P3': max(0.0, round(p3, 2)),
+        'P10': round(p10, 2),
+        'P25': round(p25, 2),
+        'P50': round(p50, 2),
+        'P75': round(p75, 2),
+        'P90': round(p90, 2),
+        'P97': round(p97, 2)
+    }
+
+# ---------------------------------------------------------
+# ALTE WERTE (Ausgegraut) - Knochendichte (DXA Lendenwirbelsäule) – Zemel et al. (2011)
+# BESCHREIBUNG: Referenzdaten für die Knochendichte der Lendenwirbelsäule
+# (Lumbar Spine aBMD in g/cm2) basierend auf der BMDCS-Studie (Non-Black Kohorte).
+# QUELLE: Zemel et al., 2011, J Clin Endocrinol Metab. DOI: 10.1210/jc.2011-1111
+# Struktur: { Alter: (L, M, S) }
+# ---------------------------------------------------------
+# DXA_LUMBAR_SPINE_LMS_ZEMEL = { ... } (ausgelassen)
+
+# ---------------------------------------------------------
+# Knochendichte (DXA TBLH-BMD) - de Groot et al. (2025)
+# BESCHREIBUNG: Referenzdaten fuer Total Body Less Head (TBLH) Knochendichte.
+# P3 und P97 wurden vorab berechnet.
+# QUELLE: de Groot et al., 2025, Eur J Endocrinol. DOI: 10.1093/ejendo/lvaf245
+# Struktur: { Alter: (P3, P10, P25, P50, P75, P90, P97) }
+# ---------------------------------------------------------
+DXA_TBLH_BMD_PERCENTILES_DE_GROOT = {
+    'boys': {
+        5:  (0.421, 0.444, 0.467, 0.493, 0.522, 0.550, 0.580),
+        6:  (0.469, 0.492, 0.516, 0.543, 0.571, 0.599, 0.629),
+        7:  (0.509, 0.533, 0.558, 0.587, 0.616, 0.646, 0.675),
+        8:  (0.539, 0.566, 0.593, 0.624, 0.657, 0.688, 0.720),
+        9:  (0.563, 0.592, 0.622, 0.656, 0.692, 0.726, 0.761),
+        10: (0.582, 0.614, 0.646, 0.683, 0.722, 0.760, 0.797),
+        11: (0.601, 0.635, 0.669, 0.710, 0.752, 0.792, 0.831),
+        12: (0.622, 0.659, 0.697, 0.742, 0.789, 0.833, 0.876),
+        13: (0.648, 0.691, 0.736, 0.788, 0.843, 0.893, 0.944),
+        14: (0.679, 0.732, 0.786, 0.851, 0.919, 0.981, 1.043),
+        15: (0.711, 0.771, 0.835, 0.911, 0.991, 1.063, 1.135),
+        16: (0.747, 0.812, 0.881, 0.964, 1.050, 1.128, 1.204),
+        17: (0.789, 0.856, 0.926, 1.011, 1.099, 1.177, 1.253),
+        18: (0.836, 0.902, 0.971, 1.054, 1.139, 1.214, 1.287),
+        19: (0.887, 0.949, 1.015, 1.094, 1.175, 1.244, 1.311),
+        20: (0.939, 0.997, 1.058, 1.132, 1.207, 1.271, 1.332)
+    },
+    'girls': {
+        5:  (0.431, 0.451, 0.472, 0.496, 0.521, 0.545, 0.569),
+        6:  (0.469, 0.492, 0.515, 0.542, 0.571, 0.598, 0.627),
+        7:  (0.500, 0.525, 0.551, 0.580, 0.612, 0.642, 0.671),
+        8:  (0.526, 0.553, 0.581, 0.613, 0.646, 0.678, 0.710),
+        9:  (0.550, 0.580, 0.610, 0.645, 0.681, 0.716, 0.751),
+        10: (0.576, 0.609, 0.644, 0.683, 0.725, 0.765, 0.804),
+        11: (0.603, 0.643, 0.683, 0.730, 0.779, 0.826, 0.874),
+        12: (0.635, 0.681, 0.728, 0.783, 0.840, 0.895, 0.950),
+        13: (0.678, 0.728, 0.779, 0.838, 0.899, 0.958, 1.018),
+        14: (0.734, 0.783, 0.833, 0.890, 0.950, 1.006, 1.063),
+        15: (0.780, 0.828, 0.876, 0.931, 0.988, 1.041, 1.096),
+        16: (0.810, 0.858, 0.906, 0.960, 1.015, 1.067, 1.119),
+        17: (0.829, 0.876, 0.924, 0.978, 1.034, 1.085, 1.137),
+        18: (0.839, 0.887, 0.935, 0.990, 1.046, 1.098, 1.150),
+        19: (0.843, 0.891, 0.941, 0.997, 1.054, 1.106, 1.159),
+        20: (0.842, 0.893, 0.944, 1.001, 1.059, 1.113, 1.167)
+    }
+}
+
+def get_dxa_bmd_reference(age, sex):
+    """Holt die statisch berechneten DXA TBLH-BMD-Perzentilen (P3-P97)."""
+    vals = get_smoothed_reference(age, sex, DXA_TBLH_BMD_PERCENTILES_DE_GROOT)
+    if math.isnan(vals[0]):
+        return {}
+    
+    p3, p10, p25, p50, p75, p90, p97 = vals
+    
+    return {
+        'P3': round(p3, 3),
+        'P10': round(p10, 3),
+        'P25': round(p25, 3),
+        'P50': round(p50, 3),
+        'P75': round(p75, 3),
+        'P90': round(p90, 3),
+        'P97': round(p97, 3)
+    }
+
+# ---------------------------------------------------------
+# 12. Körperfettanteil (InBody) – Chun et al. (2024)
+# BESCHREIBUNG: Referenzdaten für %BF gemessen mit InBody.
+# Original waren Mean/SD publiziert (Alter 7-15), hier extrapoliert auf 6-18.
+# Die Umwandlung in ein Perzentil-Modell erfolgt dynamisch über Z-Scores.
+# QUELLE: Chun et al., 2024, BMC Pediatrics. DOI: 10.1186/s12887-024-05166-3
+# Struktur: { Alter: (Mean, SD) }
+# ---------------------------------------------------------
+INBODY_BF_KOREA_MEAN_SD = {
+    'girls': {
+        6:  (19.0, 6.5), 7:  (20.3, 6.5), 8:  (21.5, 7.1), 9:  (22.9, 7.7),
+        10: (24.1, 7.9), 11: (24.4, 7.5), 12: (25.3, 7.1), 13: (26.9, 6.6),
+        14: (28.8, 6.0), 15: (29.4, 6.0), 16: (30.0, 6.0), 17: (30.6, 6.0),
+        18: (31.2, 6.0)
+    },
+    'boys': {
+        6:  (16.0, 7.0), 7:  (18.0, 6.3), 8:  (19.6, 7.5), 9:  (21.9, 7.7),
+        10: (23.6, 8.2), 11: (23.9, 8.4), 12: (21.5, 8.0), 13: (19.3, 7.5),
+        14: (18.2, 7.0), 15: (17.4, 6.5), 16: (16.5, 6.5), 17: (15.5, 6.5),
+        18: (14.5, 6.5)
+    }
+}
+
+def get_inbody_bodyfat_reference(age, sex):
+    """Berechnet Perzentilen (P3-P97) aus Mean und SD für InBody Körperfett."""
+    mean_sd_data = get_smoothed_reference(age, sex, INBODY_BF_KOREA_MEAN_SD)
+    mean, sd = mean_sd_data[0], mean_sd_data[1]
+
+    z_scores = {'P3': -1.88, 'P10': -1.28, 'P25': -0.675, 'P50': 0, 'P75': 0.675, 'P90': 1.28, 'P97': 1.88}
+    result = {}
+    for p, z in z_scores.items():
+        val = mean + (z * sd)
+        result[p] = max(0.0, round(val, 1))
+    return result

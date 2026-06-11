@@ -78,7 +78,7 @@ class ReportGenerator:
                 'mat_heading':       'Biologischer Reifegrad (Maturity)',
                 'mat_eff_age':       'Effektives Alter',
                 'mat_bio_age':       'Biologisches Alter',
-                'mat_diff_bio_eff':  'Diff. Biologisches Alter - Effektives Alter.',
+                'mat_diff_bio_eff':  'Diff. Biol. - Eff. Alter',
                 'mat_diff_phv':      'Diff. zu PHV (Wachstumsschub)',
                 'mat_col_mzp':       'MZP',
                 'mat_col_date':      'Messdatum',
@@ -94,14 +94,53 @@ class ReportGenerator:
                     "oder wie lange dieser bereits zurückliegt (positiv).</i>"
                 ),
                 'mat_warning':       (
-                    "Wichtiger methodischer Hinweis: Die Berechnung des biologischen Reifegrades basiert auf "
-                    "anthropometrischen Schätzformeln (Mirwald et al., 2002). Da die individuelle biologische Entwicklung "
-                    "unregelmässig verläuft, sind diese Werte als Annäherung mit einer beträchtlichen "
-                    "Schätzunsicherheit zu verstehen und sollten mit Vorsicht interpretiert werden."
+                    "Die anthropometrische Reifeschätzung nach Mirwald et al. (2002) ist nahe dem Wachstumsschub "
+                    "am genauesten – insbesondere im Alter von etwa 10 bis 13 Jahren (Wenger & Csapo, 2025). "
+                    "Ausserhalb davon nimmt der Schätzfehler zu: Bei früh Reifenden wird das Alter am PHV über-, "
+                    "bei spät Reifenden unterschätzt (Regression zur Mitte). Die Werte sind eine grobe Näherung "
+                    "und besonders bei sehr jungen Kindern mit Vorsicht zu interpretieren."
                 ),
                 'mat_years':         'J.',
                 # Impressum
                 'contact_heading':   'Kontakt &amp; Impressum',
+                # Körperzusammensetzung
+                'bodycomp_heading':      'Körperzusammensetzung',
+                'bodycomp_method_dxa':   'Messung: DXA (Dual-Energie-Röntgenabsorptiometrie)',
+                'bodycomp_method_inbody':'Messung: InBody (Bioelektrische Impedanzanalyse)',
+                'koerperfett_label':     'Körperfettanteil',
+                'koerperfett_dxa_expl':  (
+                    "Der Körperfettanteil beschreibt, wie viel Prozent der gesamten Körpermasse aus Fettgewebe besteht. "
+                    "Ein angemessener Körperfettanteil ist wichtig für die Gesundheit, hormonelle Regulation und sportliche Leistungsfähigkeit. "
+                    "Sehr hohe wie auch sehr tiefe Werte können die körperliche Entwicklung beeinflussen. "
+                    "Die Messung mit DXA gilt als eine der präzisesten nicht-invasiven Methoden zur Bestimmung der Körperzusammensetzung."
+                ),
+                'koerperfett_dxa_ref':   (
+                    "Ref: de Groot et al. (2025), Eur J Endocrinol (Generation R Studie, niederländische Kohorte, n=6102). "
+                    "DOI: 10.1093/ejendo/lvaf245. Diese aktuellen europäischen Referenzkurven stimmen robuster "
+                    "mit den Messwerten der Schweizer Kohorte überein als asiatische oder ältere Referenzen."
+                ),
+                'koerperfett_inbody_expl': (
+                    "Der Körperfettanteil wurde mit der InBody-Methode (bioelektrische Impedanzanalyse) gemessen. "
+                    "Die Referenzkurven basieren auf einem massiven asiatischen Datensatz von über 22\u2019000 Kindern und Jugendlichen, "
+                    "was eine hohe statistische Stabilität über den gesamten Wachstumsverlauf (6–18 Jahre) garantiert."
+                ),
+                'koerperfett_inbody_ref':  (
+                    "Ref: Chun et al. (2024), BMC Pediatrics (koreanische Kohorte, n > 22\u2019000). "
+                    "DOI: 10.1186/s12887-024-05166-3."
+                ),
+                'knochendichte_label':    'Knochendichte (BMD)',
+                'knochendichte_expl':     (
+                    "Die Knochendichte (Bone Mineral Density, BMD) beschreibt die Mineralmasse pro Fläche im Knochen (g/cm²) "
+                    "und ist ein Mass für die Knochenfestigkeit. Hier wird die Knochendichte des gesamten Körpers ohne Kopf (Total Body Less Head, TBLH-BMD) gemessen und verglichen. "
+                    "Die Knochendichte nimmt in der Kindheit und Jugend stetig zu und erreicht die Spitzenknochendichte "
+                    "typischerweise im frühen Erwachsenenalter."
+                ),
+                # ALTE REFERENZ:
+                # 'knochendichte_ref': "Ref: Zemel et al. (2011), Bone Mineral Density in Childhood Study (BMDCS), J Clin Endocrinol Metab. DOI: 10.1210/jc.2011-1111. Gemessen mit Hologic DXA-Gerät (Lendenwirbelsäule L1–L4).",
+                'knochendichte_ref':      (
+                    "Ref: de Groot et al. (2025), Eur J Endocrinol (Generation R Studie, TBLH-BMD, n=6102). "
+                    "DOI: 10.1093/ejendo/lvaf245."
+                ),
             },
             'en': {
                 'start':             'Baseline',
@@ -155,7 +194,7 @@ class ReportGenerator:
                 'mat_heading':       'Biological Maturity',
                 'mat_eff_age':       'Chronological Age',
                 'mat_bio_age':       'Biological Age',
-                'mat_diff_bio_eff':  'Diff. Biological Age – Chronological Age',
+                'mat_diff_bio_eff':  'Diff. Biol. Age – Chron. Age',
                 'mat_diff_phv':      'Diff. to PHV (Growth Spurt)',
                 'mat_col_mzp':       'TP',
                 'mat_col_date':      'Measurement Date',
@@ -171,23 +210,63 @@ class ReportGenerator:
                     "or how long ago it occurred (positive).</i>"
                 ),
                 'mat_warning':       (
-                    "Important methodological note: The biological maturity estimate is based on "
-                    "anthropometric prediction equations (Mirwald et al.). Since individual biological "
-                    "development is irregular, these values should be understood as approximations with "
-                    "considerable estimation uncertainty and interpreted with caution."
+                    "The anthropometric maturity estimation according to Mirwald et al. (2002) is most accurate near the growth spurt "
+                    "– especially between the ages of roughly 10 and 13 years (Wenger & Csapo, 2025). "
+                    "Outside of this range, the estimation error increases: in early maturers, age at PHV is overestimated, "
+                    "in late maturers it is underestimated (regression to the mean). The values are a rough approximation "
+                    "and should be interpreted with caution, especially in very young children."
                 ),
                 'mat_years':         'yrs.',
                 # Impressum
                 'contact_heading':   'Contact &amp; Imprint',
+                # Body Composition
+                'bodycomp_heading':      'Body Composition',
+                'bodycomp_method_dxa':   'Method: DXA (Dual-energy X-ray Absorptiometry)',
+                'bodycomp_method_inbody':'Method: InBody (Bioelectrical Impedance Analysis)',
+                'koerperfett_label':     'Body Fat %',
+                'koerperfett_dxa_expl':  (
+                    "Body fat percentage indicates the proportion of total body mass that consists of fat tissue. "
+                    "An appropriate body fat level is important for health, hormonal regulation and athletic performance. "
+                    "Both very high and very low values can affect physical development. "
+                    "DXA is considered one of the most precise non-invasive methods for body composition assessment."
+                ),
+                'koerperfett_dxa_ref':   (
+                    "Ref: de Groot et al. (2025), Eur J Endocrinol (Generation R Study, Dutch cohort, n=6102). "
+                    "DOI: 10.1093/ejendo/lvaf245. These contemporary European reference curves align more robustly "
+                    "with the measurements of our Swiss cohort than Asian or older references."
+                ),
+                'koerperfett_inbody_expl': (
+                    "Body fat percentage was measured using the InBody method (bioelectrical impedance analysis). "
+                    "The reference curves are based on a large Asian dataset of over 22,000 children and adolescents, "
+                    "ensuring high statistical stability across the entire growth range (ages 6\u201318 years)."
+                ),
+                'koerperfett_inbody_ref':  (
+                    "Ref: Chun et al. (2024), BMC Pediatrics (Korean cohort, n > 22,000). "
+                    "DOI: 10.1186/s12887-024-05166-3."
+                ),
+                'knochendichte_label':    'Bone Mineral Density (BMD)',
+                'knochendichte_expl':     (
+                    "Bone Mineral Density (BMD) describes the mineral mass per area in bone (g/cm²) and is a measure of bone strength. "
+                    "Here, BMD is measured and compared specifically for the entire body excluding the head (Total Body Less Head, TBLH-BMD). "
+                    "Bone density increases steadily throughout childhood and adolescence, "
+                    "typically reaching peak bone density in early adulthood."
+                ),
+                # OLD REFERENCE:
+                # 'knochendichte_ref': "Ref: Zemel et al. (2011), Bone Mineral Density in Childhood Study (BMDCS), J Clin Endocrinol Metab. DOI: 10.1210/jc.2011-1111. Measured with a Hologic DXA device (lumbar spine L1–L4).",
+                'knochendichte_ref':      (
+                    "Ref: de Groot et al. (2025), Eur J Endocrinol (Generation R Study, TBLH-BMD, n=6102). "
+                    "DOI: 10.1093/ejendo/lvaf245."
+                ),
             },
         }
         self._t = self._labels.get(lang, self._labels['de'])
 
         # --- SEKTION-TITEL (sprachabhängig) ---
         self._section_title_map = {
-            'Anthropometrie':  self._t['anthropometrie'],
-            'Kraftmessungen':  self._t['kraft'],
-            'Spiroergometrie': self._t['spiro'],
+            'Anthropometrie':     self._t['anthropometrie'],
+            'Kraftmessungen':     self._t['kraft'],
+            'Spiroergometrie':    self._t['spiro'],
+            'Koerperzusammensetzung': self._t['bodycomp_heading'],
         }
 
         # --- NEUE STRUKTUR: (Name, Key, Einheit, Plot-Name, Erklärung, Referenz-Daten, is_dummy) ---
@@ -209,10 +288,16 @@ class ReportGenerator:
                      "Maximale Handkraft im Verhältnis zum Körpergewicht. Methodischer Hinweis: Messung der maximalen isometrischen Kraft mittels standardisiertem Hand-Dynamometer.",
                      "Ref: Bohannon et al. (2017), Pediatric Physical Therapy. | Populationsbasierte Normwerte aus dem NIH Toolbox Projekt (n = 2.706).", False),
                     ("Sprunghöhe", "sprung", "cm", "sprung_abs.png",
-                     "Zeigt die Explosivität, Beinkraft und koordinative Schnellkraft.",
+                     "Zeigt die Explosivität, Beinkraft und koordinative Schnellkraft. "
+                     "Methodischer Hinweis: Da die Referenzdaten ursprünglich mit Armschwung erhoben wurden, "
+                     "unsere Messung jedoch ohne Armeinsatz stattfand, wurden die Normkurven um einen pauschalen "
+                     "Korrekturfaktor angepasst, um einen fairen Vergleich zu ermöglichen.",
                      "Ref: Tschechien, gesunde Kinder und Jugendliche | PMID: 23989252", False),
                     ("Max. Sprungpower (Relativ)", "sprung_rel", "W/kg", "sprung_rel.png",
-                     "Zeigt die maximale mechanische Leistung/Beschleunigung der Beinmuskulatur (Power) pro kg Körpergewicht während des Sprungs.",
+                     "Zeigt die maximale mechanische Leistung/Beschleunigung der Beinmuskulatur (Power) pro kg Körpergewicht während des Sprungs. "
+                     "Methodischer Hinweis: Da die Referenzdaten ursprünglich mit Armschwung erhoben wurden, "
+                     "unsere Messung jedoch ohne Armeinsatz stattfand, wurden die Normkurven um einen pauschalen "
+                     "Korrekturfaktor angepasst, um einen fairen Vergleich zu ermöglichen.",
                      "Ref: Tschechien, gesunde Kinder und Jugendliche | PMID: 23989252", False),
                     ("Isom. Kreuzheben (Absolut)", "kreuzheben", "kg", "kreuzheben_abs.png",
                      "Misst die statische Maximalkraft des gesamten Körpers beim Kreuzheben. Achtung: Verglichen mit NachwuchsathletInnen!",
@@ -256,10 +341,16 @@ class ReportGenerator:
                      "Maximum grip strength relative to body weight. Methodological note: Maximum isometric force measured with a standardised hand dynamometer.",
                      "Ref: Bohannon et al. (2017), Pediatric Physical Therapy. | Population-based norms from the NIH Toolbox Project (n = 2,706).", False),
                     ("Jump Height", "sprung", "cm", "sprung_abs.png",
-                     "Reflects explosive power, leg strength and coordinative speed-strength.",
+                     "Reflects explosive power, leg strength and coordinative speed-strength. "
+                     "Methodological note: Since the reference data were originally collected with arm swing, "
+                     "but our measurement was performed without arm use, the normative curves were adjusted by a flat "
+                     "correction factor to allow for a fair comparison.",
                      "Ref: Czech Republic, healthy children and adolescents | PMID: 23989252", False),
                     ("Max. Jump Power (Relative)", "sprung_rel", "W/kg", "sprung_rel.png",
-                     "Shows the maximum mechanical power output of the leg muscles (power) per kg of body weight during the jump.",
+                     "Shows the maximum mechanical power output of the leg muscles (power) per kg of body weight during the jump. "
+                     "Methodological note: Since the reference data were originally collected with arm swing, "
+                     "but our measurement was performed without arm use, the normative curves were adjusted by a flat "
+                     "correction factor to allow for a fair comparison.",
                      "Ref: Czech Republic, healthy children and adolescents | PMID: 23989252", False),
                     ("Isom. Deadlift (Absolute)", "kreuzheben", "kg", "kreuzheben_abs.png",
                      "Measures static whole-body strength. Note: Compared with youth athletes!",
@@ -558,6 +649,70 @@ class ReportGenerator:
         elements.append(Spacer(1, 0.2*cm))
         return elements
 
+    def _create_body_composition_block(self, patient_meta, metrics_data, plot_dict):
+        """
+        Erstellt den Körperzusammensetzungs-Abschnitt abhängig von der Messmethode:
+        - 'dxa':    Körperfettanteil + Knochendichte (beide mit DXA-Referenz)
+        - 'inbody': Nur Körperfettanteil (InBody-Referenz, mit Hinweis)
+        - 'other'/None: Kein Abschnitt
+        """
+        bodycomp_method = patient_meta.get('bodycomp_method')
+        if bodycomp_method not in ('dxa', 'inbody'):
+            return []
+
+        t = self._t
+        elements = []
+        elements.append(PageBreak())
+        
+        # Methoden-Hinweis im Titel
+        method_name = "DXA" if bodycomp_method == 'dxa' else "InBody"
+        heading_text = f"{t['bodycomp_heading']} ({method_name})"
+        elements.append(Paragraph(heading_text, self.styles['SectionHeader']))
+        
+        elements.append(Spacer(1, 0.2*cm))
+
+        # --- Körperfettanteil ---
+        koerperfett_data = metrics_data.get('koerperfett')
+        fat_block = []
+        fat_block.append(self._create_metric_table(t['koerperfett_label'], koerperfett_data, '%'))
+        fat_block.append(Spacer(1, 0.2*cm))
+
+        if bodycomp_method == 'dxa':
+            fat_plot_name = 'koerperfett_dxa_abs.png'
+            fat_expl = t['koerperfett_dxa_expl']
+            fat_ref  = t['koerperfett_dxa_ref']
+            ref_style = self.styles['ReferenceNormal']
+        else:
+            fat_plot_name = 'koerperfett_inbody_abs.png'
+            fat_expl = t['koerperfett_inbody_expl']
+            fat_ref  = t['koerperfett_inbody_ref']
+            ref_style = self.styles['ReferenceNormal']  # Chun et al. 2024 – vollständige altersaufgelöste Norm
+
+        fat_plot_path = plot_dict.get(fat_plot_name)
+        if fat_plot_path and os.path.exists(fat_plot_path):
+            fat_block.append(self._build_plot_with_icon('koerperfett', fat_plot_path))
+        fat_block.append(Paragraph(fat_expl, self.styles['ExplanationSmall']))
+        fat_block.append(Paragraph(fat_ref, ref_style))
+        fat_block.append(Spacer(1, 0.2*cm))
+        elements.append(KeepTogether(fat_block))
+
+        # --- Knochendichte (nur bei DXA) ---
+        if bodycomp_method == 'dxa':
+            bmd_data = metrics_data.get('knochendichte')
+            bmd_block = []
+            bmd_block.append(self._create_metric_table(t['knochendichte_label'], bmd_data, 'g/cm²'))
+            bmd_block.append(Spacer(1, 0.2*cm))
+
+            bmd_plot_path = plot_dict.get('knochendichte_abs.png')
+            if bmd_plot_path and os.path.exists(bmd_plot_path):
+                bmd_block.append(self._build_plot_with_icon('knochendichte', bmd_plot_path))
+            bmd_block.append(Paragraph(t['knochendichte_expl'], self.styles['ExplanationSmall']))
+            bmd_block.append(Paragraph(t['knochendichte_ref'], self.styles['ReferenceNormal']))
+            bmd_block.append(Spacer(1, 0.2*cm))
+            elements.append(KeepTogether(bmd_block))
+
+        return elements
+
     def _build_plot_with_icon(self, metric_key, plot_path):
         """Gibt ein Table-Element zurück: links das Icon (falls vorhanden), rechts der Graph."""
         script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -595,7 +750,7 @@ class ReportGenerator:
             "<br/>"
             "<b>Adresse:</b><br/>"
             "Departement für Sport, Bewegung und Gesundheit<br/>"
-            "Grosse Allee 6, 4052 Basel, Switzerland"
+            "Grosse Allee 6, 4052 Basel, Schweiz"
         )
 
         p_left  = Paragraph(impressum_text_left,  self.styles['Impressum'])
@@ -704,6 +859,7 @@ class ReportGenerator:
 
             # Maturity Block nach der Anthropometrie (erste Sektion)
             if section_title == "Anthropometrie":
+                story.extend(self._create_body_composition_block(patient_meta, metrics, plot_dict))
                 story.append(PageBreak())
                 story.extend(self._create_maturity_block(patient_meta, plot_dict))
 

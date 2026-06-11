@@ -16,7 +16,7 @@ from io import StringIO
 from dotenv import load_dotenv
 
 # ── Konfiguration ─────────────────────────────────────────────────────────────
-_env_path = os.path.join(os.path.dirname(__file__), '.env')
+_env_path = os.path.join(os.getcwd(), '.env')
 load_dotenv(_env_path)
 
 REDCAP_API_URL   = os.getenv('REDCAP_API_URL')
@@ -159,17 +159,22 @@ def get_pending_reports() -> list[str]:
         logging.error("REDCap: Antwort kein gültiges JSON: %s", response.text[:200])
         return []
 
-    pending_ids, seen = [], set()
+    # Da REDCap die Events chronologisch zurückgibt (mzp1, mzp2...),
+    # überschreiben wir im Dictionary den Eintrag, bis wir das *letzte* abgeschlossene Event haben.
+    latest_completed = {}
     for row in records:
         rec_id       = str(row.get('record_id', '')).strip()
         crf_complete = str(row.get(CRF_COMPLETE_FIELD, '')).strip()
-        upload_val   = str(row.get(UPLOAD_FIELD, '')).strip()
-        if rec_id and rec_id not in seen:
-            if crf_complete == '2' and upload_val == '':
-                pending_ids.append(rec_id)
-                seen.add(rec_id)
-                logging.info("  → Ausstehend: %s (Event: %s)",
-                             rec_id, row.get('redcap_event_name', '?'))
+        if rec_id and crf_complete == '2':
+            latest_completed[rec_id] = row
+
+    pending_ids = []
+    for rec_id, row in latest_completed.items():
+        upload_val = str(row.get(UPLOAD_FIELD, '')).strip()
+        if upload_val == '':
+            pending_ids.append(rec_id)
+            logging.info("  → Ausstehend: %s (Letztes Event: %s)",
+                         rec_id, row.get('redcap_event_name', '?'))
 
     logging.info("REDCap: %d Record(s) mit ausstehenden Reports.", len(pending_ids))
     return pending_ids
@@ -204,13 +209,14 @@ def _get_latest_crf_event(record_id: str) -> str | None:
 
 
 # ── 3. PDF-Upload ─────────────────────────────────────────────────────────────
-def upload_report_to_redcap(record_id: str, pdf_path: str) -> bool:
+def upload_report_to_redcap(record_id: str, pdf_path: str, mzp: str = None) -> bool:
     """
     Lädt ein PDF in das korrekte REDCap-Event des Patienten hoch.
 
     Args:
         record_id: REDCap Record-ID (z.B. 'decad_101')
         pdf_path:  Lokaler Pfad zur fertigen PDF-Datei
+        mzp:       Optional. Überschreibt die automatische Event-Suche (z.B. '3' für mzp3_arm_1)
 
     Returns:
         True bei Erfolg, False bei Fehler
@@ -219,10 +225,14 @@ def upload_report_to_redcap(record_id: str, pdf_path: str) -> bool:
         logging.error("Upload abgebrochen – Datei nicht gefunden: %s", pdf_path)
         return False
 
-    event = _get_latest_crf_event(record_id)
-    if not event:
-        logging.error("Upload abgebrochen – Kein vollständiges CRF-Event für %s.", record_id)
-        return False
+    if mzp:
+        event = f"mzp{mzp}_arm_1"
+        logging.info("Manueller Upload-Event gesetzt: %s (Ignoriere crf_complete Status)", event)
+    else:
+        event = _get_latest_crf_event(record_id)
+        if not event:
+            logging.error("Upload abgebrochen – Kein vollständiges CRF-Event für %s.", record_id)
+            return False
 
     logging.info("REDCap Upload: %s → Event '%s', Feld '%s'", record_id, event, UPLOAD_FIELD)
     data = {
@@ -262,8 +272,8 @@ def _set_feedback_in_progress(record_id: str, event: str) -> None:
 
     Wird automatisch nach einem erfolgreichen PDF-Upload aufgerufen.
     """
-    # Prüfen ob crf_geb und crf_id vollständig sind
-    logging.info("REDCap: Prüfe crf_geb / crf_id für %s (Event: %s)...", record_id, event)
+    # Prüfen ob q_probandenid und q_birthdate beim mzp1_arm_1 vollständig sind
+    logging.info("REDCap: Prüfe q_probandenid / q_birthdate für %s (Event: mzp1_arm_1)...", record_id)
     check_payload = {
         'token':             REDCAP_API_TOKEN,
         'content':           'record',
@@ -271,8 +281,8 @@ def _set_feedback_in_progress(record_id: str, event: str) -> None:
         'format':            'json',
         'type':              'flat',
         'records':           record_id,
-        'fields':            'record_id,crf_geb,crf_id',
-        'events':            event,
+        'fields':            'record_id,q_probandenid,q_birthdate',
+        'events':            'mzp1_arm_1',
         'rawOrLabel':        'raw',
         'rawOrLabelHeaders': 'raw',
         'returnFormat':      'json',
@@ -284,17 +294,17 @@ def _set_feedback_in_progress(record_id: str, event: str) -> None:
         return
 
     if not rows:
-        logging.warning("Feedback-Check: Keine Daten für %s gefunden.", record_id)
+        logging.warning("Feedback-Check: Keine Daten für %s in mzp1_arm_1 gefunden.", record_id)
         return
 
-    row      = rows[0]
-    crf_geb  = str(row.get('crf_geb', '')).strip()
-    crf_id   = str(row.get('crf_id',  '')).strip()
+    row           = rows[0]
+    q_birthdate   = str(row.get('q_birthdate', '')).strip()
+    q_probandenid = str(row.get('q_probandenid',  '')).strip()
 
-    if not crf_geb or not crf_id:
+    if not q_birthdate or not q_probandenid:
         logging.info(
-            "Feedback-Status nicht gesetzt: crf_geb='%s', crf_id='%s' – eines davon leer.",
-            crf_geb, crf_id
+            "Feedback-Status nicht gesetzt: q_birthdate='%s', q_probandenid='%s' – eines davon leer.",
+            q_birthdate, q_probandenid
         )
         return
 

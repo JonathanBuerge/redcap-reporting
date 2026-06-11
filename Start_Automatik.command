@@ -11,7 +11,15 @@ echo "  (Sucht in REDCap nach neuen Messungen ohne Bericht)"
 echo "============================================================"
 echo ""
 
-python3 src/main.py --auto
+if [ ! -d ".venv" ]; then
+    echo "Erstelle virtuelle Umgebung und installiere Pakete (einmaliger Vorgang)..."
+    python3 -m venv .venv
+    .venv/bin/pip install -r requirements.txt
+    echo "Installation abgeschlossen!"
+    echo ""
+fi
+
+.venv/bin/python src/main.py --auto
 
 echo ""
 if [ $? -ne 0 ]; then
