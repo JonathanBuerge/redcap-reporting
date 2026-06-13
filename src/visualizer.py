@@ -26,7 +26,7 @@ class Visualizer:
             'de': {
                 'girls':            'Mädchen',
                 'boys':             'Jungs',
-                'age_axis':         'Alter [Jahre]',
+                'age_axis':         'Alter (Jahre)',
                 'you':              'Du',
                 'your_maturity':    'Dein Reifegrad',
                 # plot titles
@@ -38,16 +38,16 @@ class Visualizer:
                 'vo2max_ylabel':        'Sauerstoff (mL/kg/min)',
                 'leistung_title':       'Max. Leistung Ergometer',
                 'leistung_ylabel':      'Leistung (Watt)',
-                'kreuzheben_rel_title': 'Ganzkörperkraft (Relativ) [Athleten-Norm!]',
+                'kreuzheben_rel_title': 'Isom. Kreuzheben (Relativ) [Athleten-Norm!]',
                 'kreuzheben_rel_ylabel':'Kraft / Gewicht (kg/kg)',
-                'beinstrecker_title':   'Max. Beinstreckkraft',
+                'beinstrecker_title':   'Beinstreckkraft (Absolut)',
                 'beinstrecker_ylabel':  'Kraft (Nm)',
-                'beinstrecker_rel_title':  'Beinkraft Relativ',
+                'beinstrecker_rel_title':  'Beinstreckkraft (Relativ)',
                 'beinstrecker_rel_ylabel': 'Kraft (Nm/kg)',
-                'handkraft_title':      'Maximale Greifkraft der dominanten Hand (kg)',
-                'handkraft_ylabel':     'Maximale Kraft [kg]',
-                'handkraft_rel_title':  'Relative Greifkraft der dominanten Hand (kg/kg)',
-                'handkraft_rel_ylabel': 'Kraft / Körpergewicht [kg/kg]',
+                'handkraft_title':      'Greifkraft (Absolut)',
+                'handkraft_ylabel':     'Kraft (kg)',
+                'handkraft_rel_title':  'Greifkraft (Relativ)',
+                'handkraft_rel_ylabel': 'Kraft / Körpergewicht (kg/kg)',
                 'kreuzheben_title':     'Isom. Kreuzheben (Absolut) [Athleten-Norm!]',
                 'kreuzheben_ylabel':    'Kraft (kg)',
                 'groesse_title':        'Körpergrösse',
@@ -77,7 +77,7 @@ class Visualizer:
             'en': {
                 'girls':            'Girls',
                 'boys':             'Boys',
-                'age_axis':         'Age [Years]',
+                'age_axis':         'Age (Years)',
                 'you':              'You',
                 'your_maturity':    'Your Maturity',
                 # plot titles
@@ -89,16 +89,16 @@ class Visualizer:
                 'vo2max_ylabel':        'Oxygen (mL/kg/min)',
                 'leistung_title':       'Max. Power Output (Ergometer)',
                 'leistung_ylabel':      'Power (Watts)',
-                'kreuzheben_rel_title': 'Whole-Body Strength (Relative) [Athlete Norm!]',
+                'kreuzheben_rel_title': 'Isom. Deadlift (Relative) [Athlete Norm!]',
                 'kreuzheben_rel_ylabel':'Force / Body Weight (kg/kg)',
-                'beinstrecker_title':   'Max. Leg Extension Strength',
+                'beinstrecker_title':   'Leg Extension Strength (Absolute)',
                 'beinstrecker_ylabel':  'Force (Nm)',
-                'beinstrecker_rel_title':  'Leg Strength (Relative)',
+                'beinstrecker_rel_title':  'Leg Extension Strength (Relative)',
                 'beinstrecker_rel_ylabel': 'Force (Nm/kg)',
-                'handkraft_title':      'Max. Grip Strength – Dominant Hand (kg)',
-                'handkraft_ylabel':     'Max. Force [kg]',
-                'handkraft_rel_title':  'Relative Grip Strength – Dominant Hand (kg/kg)',
-                'handkraft_rel_ylabel': 'Force / Body Weight [kg/kg]',
+                'handkraft_title':      'Grip Strength (Absolute)',
+                'handkraft_ylabel':     'Force (kg)',
+                'handkraft_rel_title':  'Grip Strength (Relative)',
+                'handkraft_rel_ylabel': 'Force / Body Weight (kg/kg)',
                 'kreuzheben_title':     'Isom. Deadlift (Absolute) [Athlete Norm!]',
                 'kreuzheben_ylabel':    'Force (kg)',
                 'groesse_title':        'Body Height',
@@ -178,7 +178,7 @@ class Visualizer:
                     percentiles_data[p].append(vals[i])
 
         elif metric_type == 'kreuzheben_rel':
-            title = vt['kreuzheben_rel_title']
+            title = f"{vt['kreuzheben_rel_title']} ({sex_label})"
             ylabel = vt['kreuzheben_rel_ylabel']
             p_names = ['P3', 'P10', 'P25', 'P50', 'P75', 'P90', 'P97']
             for age in ages:
@@ -205,7 +205,7 @@ class Visualizer:
                     percentiles_data[p].append(vals[i])
                     
         elif metric_type == 'handkraft':
-            title = vt['handkraft_title']
+            title = f"{vt['handkraft_title']} ({sex_label})"
             ylabel = vt['handkraft_ylabel']
             p_names = ['P3', 'P10', 'P25', 'P50', 'P75', 'P90', 'P97']
             for age in ages:
@@ -214,7 +214,7 @@ class Visualizer:
                     percentiles_data[p].append(vals[i])
                     
         elif metric_type == 'handkraft_rel':
-            title = vt['handkraft_rel_title']
+            title = f"{vt['handkraft_rel_title']} ({sex_label})"
             ylabel = vt['handkraft_rel_ylabel']
             p_names = ['P3', 'P10', 'P25', 'P50', 'P75', 'P90', 'P97']
             for age in ages:
@@ -224,7 +224,7 @@ class Visualizer:
                     percentiles_data[p].append(vals[i])
 
         elif metric_type == 'kreuzheben':
-            title = vt['kreuzheben_title']
+            title = f"{vt['kreuzheben_title']} ({sex_label})"
             ylabel = vt['kreuzheben_ylabel']
             p_names = ['P3', 'P10', 'P25', 'P50', 'P75', 'P90', 'P97']
             for age in ages:
@@ -409,7 +409,7 @@ class Visualizer:
                 for i, p in enumerate(p_names): percentiles_data[p].append(vals[i])
 
         elif metric_type == 'kreuzheben_rel':
-            title, ylabel = f"{vt['kreuzheben_rel_title']} {all_sfx}", vt['kreuzheben_rel_ylabel']
+            title, ylabel = f"{vt['kreuzheben_rel_title']} {all_sfx} ({sex_label})", vt['kreuzheben_rel_ylabel']
             for age in ages:
                 vals = get_smoothed_reference(age, sex, MTP_REL_DATA)
                 for i, p in enumerate(p_names): percentiles_data[p].append(vals[i])
@@ -441,7 +441,7 @@ class Visualizer:
                 for i, p in enumerate(p_names): percentiles_data[p].append(vals[i])
 
         elif metric_type == 'kreuzheben':
-            title, ylabel = f"{vt['kreuzheben_title']} {all_sfx}", vt['kreuzheben_ylabel']
+            title, ylabel = f"{vt['kreuzheben_title']} {all_sfx} ({sex_label})", vt['kreuzheben_ylabel']
             for age in ages:
                 vals = get_smoothed_reference(age, sex, MTP_ABS_DATA)
                 for i, p in enumerate(p_names): percentiles_data[p].append(vals[i])

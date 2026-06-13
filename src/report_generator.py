@@ -275,95 +275,95 @@ class ReportGenerator:
                 ("Anthropometrie", [
                     ("Körpergrösse", "groesse", "cm", "groesse_abs.png",
                      "Zeigt das Längenwachstum im Vergleich zur altersentsprechenden Norm.",
-                     "Ref: Deutschland, gesunde Kinder (Kromeyer-Hauschild) | DOI: 10.1007/s001120170107", False),
+                     "Ref: Kromeyer-Hauschild et al. (2001), Deutschland, gesunde Kinder. | DOI: 10.1007/s001120170107", False),
                     ("Körpergewicht", "gewicht", "kg", "gewicht_abs.png",
                      "Zeigt die Gewichtsentwicklung im Vergleich zur altersentsprechenden Norm.",
-                     "Ref: Deutschland, gesunde Kinder (Kromeyer-Hauschild) | DOI: 10.1007/s001120170107", False)
+                     "Ref: Kromeyer-Hauschild et al. (2001), Deutschland, gesunde Kinder. | DOI: 10.1007/s001120170107", False)
                 ]),
                 ("Kraftmessungen", [
-                    ("Max. Greifkraft (Absolut)", "handkraft", "kg", "handkraft_abs.png",
+                    ("Greifkraft (Absolut)", "handkraft", "kg", "handkraft_abs.png",
                      "Mass für die allgemeine Kraft des Oberkörpers (gezeigt für die dominante Hand). Methodischer Hinweis: Messung der maximalen isometrischen Kraft mittels standardisiertem Hand-Dynamometer.",
-                     "Ref: Bohannon et al. (2017), Pediatric Physical Therapy. | Populationsbasierte Normwerte aus dem NIH Toolbox Projekt (n = 2.706).", False),
+                     "Ref: Bohannon et al. (2017), populationsbasierte Normwerte aus dem NIH Toolbox Projekt (n=2'706). | DOI: 10.1097/PEP.0000000000000366", False),
                     ("Greifkraft (Relativ)", "handkraft_rel", "kg/kg", "handkraft_rel.png",
                      "Maximale Handkraft im Verhältnis zum Körpergewicht. Methodischer Hinweis: Messung der maximalen isometrischen Kraft mittels standardisiertem Hand-Dynamometer.",
-                     "Ref: Bohannon et al. (2017), Pediatric Physical Therapy. | Populationsbasierte Normwerte aus dem NIH Toolbox Projekt (n = 2.706).", False),
+                     "Ref: Bohannon et al. (2017), populationsbasierte Normwerte aus dem NIH Toolbox Projekt (n=2'706). | DOI: 10.1097/PEP.0000000000000366", False),
                     ("Sprunghöhe", "sprung", "cm", "sprung_abs.png",
                      "Zeigt die Explosivität, Beinkraft und koordinative Schnellkraft. "
                      "Methodischer Hinweis: Da die Referenzdaten ursprünglich mit Armschwung erhoben wurden, "
                      "unsere Messung jedoch ohne Armeinsatz stattfand, wurden die Normkurven um einen pauschalen "
                      "Korrekturfaktor angepasst, um einen fairen Vergleich zu ermöglichen.",
-                     "Ref: Tschechien, gesunde Kinder und Jugendliche | PMID: 23989252", False),
-                    ("Max. Sprungpower (Relativ)", "sprung_rel", "W/kg", "sprung_rel.png",
+                     "Ref: Šumník et al. (2013), Tschechien, gesunde Kinder und Jugendliche. | PMID: 23989251", False),
+                    ("Max. Sprungpower", "sprung_rel", "W/kg", "sprung_rel.png",
                      "Zeigt die maximale mechanische Leistung/Beschleunigung der Beinmuskulatur (Power) pro kg Körpergewicht während des Sprungs. "
                      "Methodischer Hinweis: Da die Referenzdaten ursprünglich mit Armschwung erhoben wurden, "
                      "unsere Messung jedoch ohne Armeinsatz stattfand, wurden die Normkurven um einen pauschalen "
                      "Korrekturfaktor angepasst, um einen fairen Vergleich zu ermöglichen.",
-                     "Ref: Tschechien, gesunde Kinder und Jugendliche | PMID: 23989252", False),
+                     "Ref: Šumník et al. (2013), Tschechien, gesunde Kinder und Jugendliche. | PMID: 23989251", False),
                     ("Isom. Kreuzheben (Absolut)", "kreuzheben", "kg", "kreuzheben_abs.png",
                      "Misst die statische Maximalkraft des gesamten Körpers beim Kreuzheben. Achtung: Verglichen mit NachwuchsathletInnen!",
-                     "Ref: Morris et al. (2020) Jungs & Salter et al. (2025) Mädchen (Athleten-Norm!)", False),
-                    ("Ganzkörperkraft (Relativ)", "kreuzheben_rel", "kg/kg", "kreuzheben_rel.png",
+                     "Ref: Morris et al. (2020) Jungs & Salter et al. (2025) Mädchen (Athleten-Norm!). | DOI: 10.1519/JSC.0000000000002673 & 10.1519/JSC.0000000000005029", False),
+                    ("Isom. Kreuzheben (Relativ)", "kreuzheben_rel", "kg/kg", "kreuzheben_rel.png",
                      "Statische Maximalkraft des Körpers im Verhältnis zum Körpergewicht. Achtung: Verglichen mit NachwuchsathletInnen!",
-                     "Ref: Morris et al. (2020) Jungs & Salter et al. (2025) Mädchen (Athleten-Norm!)", False),
-                    ("Max. Beinstreckkraft (Absolut)", "beinstrecker", "Nm", "beinstrecker_abs.png",
+                     "Ref: Morris et al. (2020) Jungs & Salter et al. (2025) Mädchen (Athleten-Norm!). | DOI: 10.1519/JSC.0000000000002673 & 10.1519/JSC.0000000000005029", False),
+                    ("Beinstreckkraft (Absolut)", "beinstrecker", "Nm", "beinstrecker_abs.png",
                      "Zeigt die isolierte, absolute Kraft der vorderen Oberschenkelmuskulatur (Drehmoment).",
-                     "Ref: Kanada, gesunde Kinder und Jugendliche | Hébert et al. (2015)", False),
-                    ("Beinkraft (Relativ)", "beinstrecker_rel", "Nm/kg", "beinstrecker_rel.png",
+                     "Ref: Hébert et al. (2015), Kanada, gesunde Kinder und Jugendliche. | DOI: 10.1097/PEP.0000000000000179", False),
+                    ("Beinstreckkraft (Relativ)", "beinstrecker_rel", "Nm/kg", "beinstrecker_rel.png",
                      "Isolierte Oberschenkelkraft im Verhältnis zum Körpergewicht.",
-                     "Ref: Kanada, gesunde Kinder und Jugendliche | Hébert et al. (2015)", False)
+                     "Ref: Hébert et al. (2015), Kanada, gesunde Kinder und Jugendliche. | DOI: 10.1097/PEP.0000000000000179", False)
                 ]),
                 ("Spiroergometrie", [
                     ("Ausdauer (VO2max)", "vo2max", "mL/kg/min", "vo2max_abs.png",
                      "Die VO2max gilt als der 'Goldstandard' zur Bestimmung der Herz-Kreislauf-Fitness. Sie misst, "
                      "wie viel Sauerstoff dein Körper unter maximaler Belastung aufnehmen, in den Blutkreislauf transportieren "
                      "und in die Muskeln weiterleiten kann, um Energie zu erzeugen. Da dieser Wert relativ zum Körpergewicht gemessen wird "
-                     "(in ml pro kg Körpergewicht pro Minute), ermöglicht er einen fairen Vergleich der Leistungsfähigkeit unabhängig von der individuellen Körpermasse..",
-                     "Ref: Niederlande, gesunde Kinder und Jugendliche (SentrySuite) | DOI: 10.1513/AnnalsATS.201611-912FR", False),
-                    ("Max. Leistung", "leistung", "Watt", "leistung_abs.png",
+                     "(in ml pro kg Körpergewicht pro Minute), ermöglicht er einen fairen Vergleich der Leistungsfähigkeit unabhängig von der individuellen Körpermasse.",
+                     "Ref: Takken et al. (2017), Niederlande, gesunde Kinder und Jugendliche (SentrySuite). | DOI: 10.1513/AnnalsATS.201611-912FR", False),
+                    ("Max. Leistung Ergometer", "leistung", "Watt", "leistung_abs.png",
                      "Maximale mechanische Ausdauer-Leistung auf dem Fahrrad-Ergometer.",
-                     "Ref: Niederlande, gesunde Kinder und Jugendliche (SentrySuite) | DOI: 10.1513/AnnalsATS.201611-912FR", False)
+                     "Ref: Takken et al. (2017), Niederlande, gesunde Kinder und Jugendliche (SentrySuite). | DOI: 10.1513/AnnalsATS.201611-912FR", False)
                 ])
             ],
             'en': [
                 ("Anthropometrie", [
                     ("Body Height", "groesse", "cm", "groesse_abs.png",
                      "Shows height development compared to the age-appropriate norm.",
-                     "Ref: Germany, healthy children (Kromeyer-Hauschild) | DOI: 10.1007/s001120170107", False),
+                     "Ref: Kromeyer-Hauschild et al. (2001), Germany, healthy children. | DOI: 10.1007/s001120170107", False),
                     ("Body Weight", "gewicht", "kg", "gewicht_abs.png",
                      "Shows weight development compared to the age-appropriate norm.",
-                     "Ref: Germany, healthy children (Kromeyer-Hauschild) | DOI: 10.1007/s001120170107", False)
+                     "Ref: Kromeyer-Hauschild et al. (2001), Germany, healthy children. | DOI: 10.1007/s001120170107", False)
                 ]),
                 ("Kraftmessungen", [
-                    ("Max. Grip Strength (Absolute)", "handkraft", "kg", "handkraft_abs.png",
+                    ("Grip Strength (Absolute)", "handkraft", "kg", "handkraft_abs.png",
                      "Indicator of general upper-body strength (dominant hand). Methodological note: Maximum isometric force measured with a standardised hand dynamometer.",
-                     "Ref: Bohannon et al. (2017), Pediatric Physical Therapy. | Population-based norms from the NIH Toolbox Project (n = 2,706).", False),
+                     "Ref: Bohannon et al. (2017), population-based norms from the NIH Toolbox Project (n=2,706). | DOI: 10.1097/PEP.0000000000000366", False),
                     ("Grip Strength (Relative)", "handkraft_rel", "kg/kg", "handkraft_rel.png",
                      "Maximum grip strength relative to body weight. Methodological note: Maximum isometric force measured with a standardised hand dynamometer.",
-                     "Ref: Bohannon et al. (2017), Pediatric Physical Therapy. | Population-based norms from the NIH Toolbox Project (n = 2,706).", False),
+                     "Ref: Bohannon et al. (2017), population-based norms from the NIH Toolbox Project (n=2,706). | DOI: 10.1097/PEP.0000000000000366", False),
                     ("Jump Height", "sprung", "cm", "sprung_abs.png",
                      "Reflects explosive power, leg strength and coordinative speed-strength. "
                      "Methodological note: Since the reference data were originally collected with arm swing, "
                      "but our measurement was performed without arm use, the normative curves were adjusted by a flat "
                      "correction factor to allow for a fair comparison.",
-                     "Ref: Czech Republic, healthy children and adolescents | PMID: 23989252", False),
-                    ("Max. Jump Power (Relative)", "sprung_rel", "W/kg", "sprung_rel.png",
+                     "Ref: Šumník et al. (2013), Czech Republic, healthy children and adolescents. | PMID: 23989251", False),
+                    ("Max. Jump Power", "sprung_rel", "W/kg", "sprung_rel.png",
                      "Shows the maximum mechanical power output of the leg muscles (power) per kg of body weight during the jump. "
                      "Methodological note: Since the reference data were originally collected with arm swing, "
                      "but our measurement was performed without arm use, the normative curves were adjusted by a flat "
                      "correction factor to allow for a fair comparison.",
-                     "Ref: Czech Republic, healthy children and adolescents | PMID: 23989252", False),
+                     "Ref: Šumník et al. (2013), Czech Republic, healthy children and adolescents. | PMID: 23989251", False),
                     ("Isom. Deadlift (Absolute)", "kreuzheben", "kg", "kreuzheben_abs.png",
                      "Measures static whole-body strength. Note: Compared with youth athletes!",
-                     "Ref: Morris et al. (2020) Boys & Salter et al. (2025) Girls (Athlete Norm!)", False),
-                    ("Whole-Body Strength (Relative)", "kreuzheben_rel", "kg/kg", "kreuzheben_rel.png",
+                     "Ref: Morris et al. (2020) Boys & Salter et al. (2025) Girls (Athlete Norm!). | DOI: 10.1519/JSC.0000000000002673 & 10.1519/JSC.0000000000005029", False),
+                    ("Isom. Deadlift (Relative)", "kreuzheben_rel", "kg/kg", "kreuzheben_rel.png",
                      "Static whole-body strength relative to body weight. Note: Compared with youth athletes!",
-                     "Ref: Morris et al. (2020) Boys & Salter et al. (2025) Girls (Athlete Norm!)", False),
-                    ("Max. Leg Extension Strength (Absolute)", "beinstrecker", "Nm", "beinstrecker_abs.png",
+                     "Ref: Morris et al. (2020) Boys & Salter et al. (2025) Girls (Athlete Norm!). | DOI: 10.1519/JSC.0000000000002673 & 10.1519/JSC.0000000000005029", False),
+                    ("Leg Extension Strength (Absolute)", "beinstrecker", "Nm", "beinstrecker_abs.png",
                      "Shows isolated absolute strength of the quadriceps (torque).",
-                     "Ref: Canada, healthy children and adolescents | Hébert et al. (2015)", False),
-                    ("Leg Strength (Relative)", "beinstrecker_rel", "Nm/kg", "beinstrecker_rel.png",
+                     "Ref: Hébert et al. (2015), Canada, healthy children and adolescents. | DOI: 10.1097/PEP.0000000000000179", False),
+                    ("Leg Extension Strength (Relative)", "beinstrecker_rel", "Nm/kg", "beinstrecker_rel.png",
                      "Isolated quadriceps strength relative to body weight.",
-                     "Ref: Canada, healthy children and adolescents | Hébert et al. (2015)", False)
+                     "Ref: Hébert et al. (2015), Canada, healthy children and adolescents. | DOI: 10.1097/PEP.0000000000000179", False)
                 ]),
                 ("Spiroergometrie", [
                     ("Cardiorespiratory Fitness (VO2max)", "vo2max", "mL/kg/min", "vo2max_abs.png",
@@ -371,10 +371,10 @@ class ReportGenerator:
                      "how much oxygen your body can take in under maximal exertion, transport into the bloodstream, "
                      "and deliver to the muscles to produce energy. Because this value is measured relative to body weight "
                      "(in ml per kg of body weight per minute), it allows for a fair comparison of performance independent of individual body mass.",
-                     "Ref: Netherlands, healthy children and adolescents (SentrySuite) | DOI: 10.1513/AnnalsATS.201611-912FR", False),
-                    ("Max. Power Output", "leistung", "Watts", "leistung_abs.png",
+                     "Ref: Takken et al. (2017), Netherlands, healthy children and adolescents (SentrySuite). | DOI: 10.1513/AnnalsATS.201611-912FR", False),
+                    ("Max. Power Output (Ergometer)", "leistung", "Watts", "leistung_abs.png",
                      "Maximum mechanical endurance power output on the cycle ergometer.",
-                     "Ref: Netherlands, healthy children and adolescents (SentrySuite) | DOI: 10.1513/AnnalsATS.201611-912FR", False)
+                     "Ref: Takken et al. (2017), Netherlands, healthy children and adolescents (SentrySuite). | DOI: 10.1513/AnnalsATS.201611-912FR", False)
                 ])
             ]
         }
