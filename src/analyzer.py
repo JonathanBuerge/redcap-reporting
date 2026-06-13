@@ -50,10 +50,28 @@ class Analyzer:
             if not found_sex:
                 logger.warning(f"DATENFEHLER: Patient {p_id} hat kein Geschlecht hinterlegt!")
                 
-            # Check Birthdate
+            # Check Birthdate (global)
             valid_geb = p_df['crf_geb'].dropna() if 'crf_geb' in p_df.columns else pd.Series(dtype=object)
             if valid_geb.empty:
-                logger.warning(f"DATENFEHLER: Patient {p_id} hat kein Geburtsdatum (crf_geb) hinterlegt!")
+                logger.warning(f"DATENFEHLER: Patient {p_id} hat kein Geburtsdatum (crf_geb) in der gesamten Historie hinterlegt!")
+
+            # Check Login Fields at MZP1
+            mzp1_rows = p_df[p_df.get('redcap_event_name', '') == 'mzp1_arm_1']
+            if not mzp1_rows.empty:
+                has_crf_id = False
+                has_birthdate = False
+                
+                if 'crf_id' in mzp1_rows.columns and not mzp1_rows['crf_id'].dropna().empty:
+                    has_crf_id = True
+                    
+                for b_col in ['q_birthdate', 'crf_geb']:
+                    if b_col in mzp1_rows.columns and not mzp1_rows[b_col].dropna().empty:
+                        has_birthdate = True
+                        
+                if not has_crf_id:
+                    logger.warning(f"DATENFEHLER: Patient {p_id} hat beim MZP1 keine 'crf_id' (Zwingendes Login-Feld fehlt)!")
+                if not has_birthdate:
+                    logger.warning(f"DATENFEHLER: Patient {p_id} hat beim MZP1 kein Geburtsdatum 'q_birthdate' / 'crf_geb' (Zwingendes Login-Feld fehlt)!")
                 
             # Check measurement dates for rows that have actual data
             for _, row in p_df.iterrows():
