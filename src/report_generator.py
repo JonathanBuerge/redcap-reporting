@@ -116,8 +116,7 @@ class ReportGenerator:
                 ),
                 'koerperfett_dxa_ref':   (
                     "Ref: de Groot et al. (2025), Eur J Endocrinol (Generation R Studie, niederländische Kohorte, n=6102). "
-                    "DOI: 10.1093/ejendo/lvaf245. Diese aktuellen europäischen Referenzkurven stimmen robuster "
-                    "mit den Messwerten der Schweizer Kohorte überein als asiatische oder ältere Referenzen."
+                    "DOI: 10.1093/ejendo/lvaf245."
                 ),
                 'koerperfett_inbody_expl': (
                     "Der Körperfettanteil wurde mit der InBody-Methode (bioelektrische Impedanzanalyse) gemessen. "
@@ -232,8 +231,7 @@ class ReportGenerator:
                 ),
                 'koerperfett_dxa_ref':   (
                     "Ref: de Groot et al. (2025), Eur J Endocrinol (Generation R Study, Dutch cohort, n=6102). "
-                    "DOI: 10.1093/ejendo/lvaf245. These contemporary European reference curves align more robustly "
-                    "with the measurements of our Swiss cohort than Asian or older references."
+                    "DOI: 10.1093/ejendo/lvaf245."
                 ),
                 'koerperfett_inbody_expl': (
                     "Body fat percentage was measured using the InBody method (bioelectrical impedance analysis). "
@@ -642,7 +640,7 @@ class ReportGenerator:
             img = Image(plot_path, width=15*cm, height=8.75*cm)
             elements.append(img)
             
-        doi_link = '<a href="https://doi.org/10.1249/00005768-200204000-00020" color="blue">10.1249/00005768-200204000-00020</a>'
+        doi_link = '10.1249/00005768-200204000-00020'
         info_text = t['mat_info'].format(doi=doi_link)
         elements.append(Paragraph(info_text, self.styles['ExplanationSmall']))
         elements.append(Paragraph(t['mat_warning'], self.styles['MaturityWarning']))
