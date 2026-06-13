@@ -393,6 +393,10 @@ def main():
         return
 
     analyzer = Analyzer(df)
+    
+    logging.info("Überprüfe Datenintegrität des gesamten Datensatzes...")
+    analyzer.check_data_integrity(logging)
+    
     # Sprache für diesen Lauf bestimmen (manuell oder Default)
     run_lang = args.lang if args.lang else 'de'
     viz = Visualizer(lang=run_lang)
@@ -407,8 +411,9 @@ def main():
         for p_id in all_ids_in_csv:
             mdata = analyzer.get_patient_data(p_id)
             if mdata:
-                p_sex = mdata["meta"].get("sex", "girls")
-                dev_overview[p_sex].append((str(p_id), mdata))
+                p_sex = mdata["meta"].get("sex", "unknown")
+                if p_sex in dev_overview:
+                    dev_overview[p_sex].append((str(p_id), mdata))
 
     # 4. Berichte generieren
     for p_id in patient_ids_to_process:

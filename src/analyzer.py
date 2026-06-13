@@ -33,6 +33,40 @@ class Analyzer:
                 return self.df['record_id'].dropna().unique()
             return self.df.iloc[:, 0].dropna().unique()
         return []
+    def check_data_integrity(self, logger):
+        all_ids = self.get_all_patient_ids()
+        for p_id in all_ids:
+            if 'record_id' in self.df.columns:
+                p_df = self.df[self.df['record_id'].astype(str) == str(p_id)]
+            else:
+                p_df = self.df[self.df.iloc[:, 0].astype(str) == str(p_id)]
+                
+            # Check Sex
+            found_sex = False
+            for s_col in ['q_sex2', 'q_sex', 'sex', 'Gender']:
+                if s_col in p_df.columns:
+                    vals = p_df[s_col].dropna()
+                    if not vals.empty: found_sex = True
+            if not found_sex:
+                logger.warning(f"DATENFEHLER: Patient {p_id} hat kein Geschlecht hinterlegt!")
+                
+            # Check Birthdate
+            valid_geb = p_df['crf_geb'].dropna() if 'crf_geb' in p_df.columns else pd.Series(dtype=object)
+            if valid_geb.empty:
+                logger.warning(f"DATENFEHLER: Patient {p_id} hat kein Geburtsdatum (crf_geb) hinterlegt!")
+                
+            # Check measurement dates for rows that have actual data
+            for _, row in p_df.iterrows():
+                # Check if height or weight is present (proxy for a real measurement session)
+                has_data = pd.notna(row.get('crf_height')) or pd.notna(row.get('crf_weight'))
+                if has_data:
+                    date_val = str(row.get('crf_date', '')).strip() if pd.notna(row.get('crf_date')) else ''
+                    ts_val = str(row.get('crf_timestamp', '')).strip() if pd.notna(row.get('crf_timestamp')) else ''
+                    ts_parq = str(row.get('parq_timestamp', '')).strip() if pd.notna(row.get('parq_timestamp')) else ''
+                    
+                    if not date_val and not ts_val and not ts_parq:
+                        event = row.get('redcap_event_name', 'Unbekanntes Event')
+                        logger.warning(f"DATENFEHLER: Patient {p_id} hat Messwerte im Event '{event}', aber weder crf_date noch timestamp!")
 
     def get_patient_data(self, patient_id):
         if 'record_id' in self.df.columns:
@@ -77,7 +111,7 @@ class Analyzer:
         if current_age: current_age = round(current_age, 1)
 
         # --- Geschlecht ---
-        sex_str = 'girls' 
+        sex_str = 'unknown' 
         found_sex_val = None
         for s_col in ['q_sex2', 'q_sex', 'sex', 'Gender']:
             if s_col in p_df.columns:
