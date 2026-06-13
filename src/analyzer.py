@@ -35,6 +35,13 @@ class Analyzer:
         return []
     def check_data_integrity(self, logger):
         all_ids = self.get_all_patient_ids()
+        
+        errors_sex = 0
+        errors_birthdate_global = 0
+        errors_crf_id_mzp1 = 0
+        errors_birthdate_mzp1 = 0
+        errors_measurement_date = 0
+
         for p_id in all_ids:
             if 'record_id' in self.df.columns:
                 p_df = self.df[self.df['record_id'].astype(str) == str(p_id)]
@@ -49,11 +56,13 @@ class Analyzer:
                     if not vals.empty: found_sex = True
             if not found_sex:
                 logger.warning(f"DATENFEHLER: Patient {p_id} hat kein Geschlecht hinterlegt!")
+                errors_sex += 1
                 
             # Check Birthdate (global)
             valid_geb = p_df['crf_geb'].dropna() if 'crf_geb' in p_df.columns else pd.Series(dtype=object)
             if valid_geb.empty:
                 logger.warning(f"DATENFEHLER: Patient {p_id} hat kein Geburtsdatum (crf_geb) in der gesamten Historie hinterlegt!")
+                errors_birthdate_global += 1
 
             # Check Login Fields at MZP1
             mzp1_rows = p_df[p_df.get('redcap_event_name', '') == 'mzp1_arm_1']
@@ -70,8 +79,10 @@ class Analyzer:
                         
                 if not has_crf_id:
                     logger.warning(f"DATENFEHLER: Patient {p_id} hat beim MZP1 keine 'crf_id' (Zwingendes Login-Feld fehlt)!")
+                    errors_crf_id_mzp1 += 1
                 if not has_birthdate:
                     logger.warning(f"DATENFEHLER: Patient {p_id} hat beim MZP1 kein Geburtsdatum 'q_birthdate' / 'crf_geb' (Zwingendes Login-Feld fehlt)!")
+                    errors_birthdate_mzp1 += 1
                 
             # Check measurement dates for rows that have actual data
             for _, row in p_df.iterrows():
@@ -85,6 +96,18 @@ class Analyzer:
                     if not date_val and not ts_val and not ts_parq:
                         event = row.get('redcap_event_name', 'Unbekanntes Event')
                         logger.warning(f"DATENFEHLER: Patient {p_id} hat Messwerte im Event '{event}', aber weder crf_date noch timestamp!")
+                        errors_measurement_date += 1
+
+        if errors_sex == 0:
+            logger.info("✅ DATENINTEGRITÄT: Alle Patienten haben ein Geschlecht hinterlegt.")
+        if errors_birthdate_global == 0:
+            logger.info("✅ DATENINTEGRITÄT: Alle Patienten haben ein globales Geburtsdatum.")
+        if errors_crf_id_mzp1 == 0:
+            logger.info("✅ DATENINTEGRITÄT: Alle Patienten haben beim MZP1 eine 'crf_id'.")
+        if errors_birthdate_mzp1 == 0:
+            logger.info("✅ DATENINTEGRITÄT: Alle Patienten haben beim MZP1 ein Geburtsdatum ('q_birthdate').")
+        if errors_measurement_date == 0:
+            logger.info("✅ DATENINTEGRITÄT: Alle Mess-Events haben ein gültiges crf_date oder timestamp.")
 
     def get_patient_data(self, patient_id):
         if 'record_id' in self.df.columns:
