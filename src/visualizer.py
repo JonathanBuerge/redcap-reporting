@@ -25,7 +25,7 @@ class Visualizer:
         _labels = {
             'de': {
                 'girls':            'Mädchen',
-                'boys':             'Jungs',
+                'boys':             'Knaben',
                 'age_axis':         'Alter (Jahre)',
                 'you':              'Du',
                 'your_maturity':    'Dein Reifegrad',

@@ -119,6 +119,8 @@ def _dev_build_phv_content(patients_for_sex: list, sex: str, tmp_dir: str):
     # Track which row indices are "raw" rows (for styling)
     raw_row_indices = [1]  # subheader is index 1
     formula_row_indices = []
+    
+    calculations_added = 0
 
     for p_id, mdata in patients_for_sex:
         history = mdata.get("meta", {}).get("maturity_history", [])
@@ -152,46 +154,48 @@ def _dev_build_phv_content(patients_for_sex: list, sex: str, tmp_dir: str):
             diff_34_str = _diff_str(bio_eq34, diff_eq34_list)
             diff_12_str = _diff_str(bio_eq12, diff_eq12_list)
 
-            # --- Zeile 1: Ergebnisse ---
-            rows.append([
-                str(p_id),
-                f"T{i+1}",
-                str(date)[:10],
-                f"{chron:.1f}",
-                f"{off_eq34:.2f}" if off_eq34 is not None else "-",
-                f"{bio_eq34:.1f}" if bio_eq34 is not None else "-",
-                diff_34_str,
-                f"{off_eq12:.2f}" if off_eq12 is not None else "-",
-                f"{bio_eq12:.1f}" if bio_eq12 is not None else "-",
-                diff_12_str,
-            ])
+            if calculations_added < 5:
+                # --- Zeile 1: Ergebnisse ---
+                rows.append([
+                    str(p_id),
+                    f"T{i+1}",
+                    str(date)[:10],
+                    f"{chron:.1f}",
+                    f"{off_eq34:.2f}" if off_eq34 is not None else "-",
+                    f"{bio_eq34:.1f}" if bio_eq34 is not None else "-",
+                    diff_34_str,
+                    f"{off_eq12:.2f}" if off_eq12 is not None else "-",
+                    f"{bio_eq12:.1f}" if bio_eq12 is not None else "-",
+                    diff_12_str,
+                ])
 
-            # --- Zeile 2: Rohdaten ---
-            raw_row_indices.append(len(rows))  # index before append
-            rows.append([
-                "",
-                "",
-                "↳ Rohwerte:",
-                f"G: {raw_h} cm"   if raw_h   is not None else "-",
-                f"W: {raw_w} kg"   if raw_w   is not None else "-",
-                f"SH: {raw_sh} cm" if raw_sh  is not None else "-",
-                f"BL: {raw_leg} cm"if raw_leg is not None else "-",
-                "",
-                "",
-                "",
-            ])
+                # --- Zeile 2: Rohdaten ---
+                raw_row_indices.append(len(rows))  # index before append
+                rows.append([
+                    "",
+                    "",
+                    "↳ Rohwerte:",
+                    f"G: {raw_h} cm"   if raw_h   is not None else "-",
+                    f"W: {raw_w} kg"   if raw_w   is not None else "-",
+                    f"SH: {raw_sh} cm" if raw_sh  is not None else "-",
+                    f"BL: {raw_leg} cm"if raw_leg is not None else "-",
+                    "",
+                    "",
+                    "",
+                ])
 
-            # --- Zeile 3: Rechnung ---
-            f_eq34_str = entry.get("f_eq34_str", "-")
-            f_eq12_str = entry.get("f_eq12_str", "-")
-            formula_row_indices.append(len(rows))
-            rows.append([
-                "",
-                "",
-                "↳ Formeln:",
-                Paragraph(f"<font size=5><b>Eq3/4:</b> {f_eq34_str}<br/><b>Eq1/2:</b> {f_eq12_str}</font>", styles['Normal']),
-                "", "", "", "", "", ""
-            ])
+                # --- Zeile 3: Rechnung ---
+                f_eq34_str = entry.get("f_eq34_str", "-")
+                f_eq12_str = entry.get("f_eq12_str", "-")
+                formula_row_indices.append(len(rows))
+                rows.append([
+                    "",
+                    "",
+                    "↳ Formeln:",
+                    Paragraph(f"<font size=5><b>Eq3/4:</b> {f_eq34_str}<br/><b>Eq1/2:</b> {f_eq12_str}</font>", styles['Normal']),
+                    "", "", "", "", "", ""
+                ])
+                calculations_added += 1
 
             if chron is not None:
                 scatter_chron.append(chron)
@@ -210,7 +214,7 @@ def _dev_build_phv_content(patients_for_sex: list, sex: str, tmp_dir: str):
     rows.append(avg_cells)
 
     story_elements.append(Paragraph(
-        f"<b>PHV-Daten ({'Mädchen' if sex == 'girls' else 'Jungs'})</b>",
+        f"<b>PHV-Daten ({'Mädchen' if sex == 'girls' else 'Knaben'})</b>",
         styles['Heading2']
     ))
     story_elements.append(Spacer(1, 0.3*cm))
@@ -246,7 +250,7 @@ def _dev_build_phv_content(patients_for_sex: list, sex: str, tmp_dir: str):
 
     # --- Scatter-Plots ---
     scatter_paths = []
-    sex_label_text = 'Mädchen' if sex == 'girls' else 'Jungs'
+    sex_label_text = 'Mädchen' if sex == 'girls' else 'Knaben'
     ref_phv = 14.0 if sex == 'boys' else 12.0
     pt_color = '#e53935' if sex == 'boys' else '#8e24aa'
 
@@ -541,7 +545,7 @@ def main():
                 logging.info("  Übersicht '%s': Keine Daten vorhanden, überspringe.", sex)
                 continue
 
-            sex_label = 'Maedchen' if sex == 'girls' else 'Jungs'
+            sex_label = 'Maedchen' if sex == 'girls' else 'Knaben'
             plots_dir = os.path.join(overview_base, f"plots_{sex_label}")
             os.makedirs(plots_dir, exist_ok=True)
 
@@ -609,14 +613,10 @@ def main():
                                         topMargin=1*cm, bottomMargin=1*cm)
                 styles = getSampleStyleSheet()
                 story = []
-                title_text = f"DEV-Übersicht: {'Mädchen' if sex == 'girls' else 'Jungs'} ({len(patients_for_sex)} Patienten)"
+                title_text = f"DEV-Übersicht: {'Mädchen' if sex == 'girls' else 'Knaben'} ({len(patients_for_sex)} Patienten)"
                 story.append(Paragraph(title_text, styles['Title']))
                 story.append(Spacer(1, 0.5*cm))
                 
-                note_text = ("<font color='red'><b>Hinweis:</b> Die Patienten 116, 137, 134 und 141 wurden aus den DXA-Plots "
-                             "(Körperfett & Knochendichte) vorübergehend ausgeschlossen. "
-                             "Sie werden nach der Korrektur ihrer Werte wieder hinzugefügt.</font>")
-                story.append(Paragraph(note_text, styles['Normal']))
                 story.append(Spacer(1, 0.5*cm))
 
                 # Übersicht-Plots in die richtige Reihenfolge bringen (passend zum Patienten-Report)

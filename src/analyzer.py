@@ -281,7 +281,7 @@ class Analyzer:
                 if h > 0:
                     leg = h - sh
                     
-                    # --- Gleichung 1 (Jungs) / 2 (Mädchen): Ursprüngliche Gleichungen ---
+                    # --- Gleichung 1 (Knaben) / 2 (Mädchen): Ursprüngliche Gleichungen ---
                     if sex_str == 'boys':
                         off_eq12 = -29.769 + (0.0003007 * leg * sh) - (0.01177 * age * leg) + (0.01639 * age * sh) + (0.445 * (leg / h * 100))
                         f_eq12_str = f"-29.769 + (0.0003007*{leg:.1f}*{sh:.1f}) - (0.01177*{age:.1f}*{leg:.1f}) + (0.01639*{age:.1f}*{sh:.1f}) + (0.445*({leg:.1f}/{h:.1f}*100))"
@@ -289,7 +289,7 @@ class Analyzer:
                         off_eq12 = -16.364 + (0.0002309 * leg * sh) + (0.006277 * age * sh) + (0.179 * (leg / h * 100)) + (0.0009428 * age * w)
                         f_eq12_str = f"-16.364 + (0.0002309*{leg:.1f}*{sh:.1f}) + (0.006277*{age:.1f}*{sh:.1f}) + (0.179*({leg:.1f}/{h:.1f}*100)) + (0.0009428*{age:.1f}*{w:.1f})"
                     
-                    # --- Gleichung 3 (Jungs) / 4 (Mädchen): Kombinierte Gleichungen ---
+                    # --- Gleichung 3 (Knaben) / 4 (Mädchen): Kombinierte Gleichungen ---
                     if sex_str == 'boys':
                         off_eq34 = -9.236 + (0.0002708 * leg * sh) - (0.001663 * age * leg) + (0.007216 * age * sh) + (0.02292 * (w / h) * 100)
                         f_eq34_str = f"-9.236 + (0.0002708*{leg:.1f}*{sh:.1f}) - (0.001663*{age:.1f}*{leg:.1f}) + (0.007216*{age:.1f}*{sh:.1f}) + (0.02292*({w:.1f}/{h:.1f})*100)"
