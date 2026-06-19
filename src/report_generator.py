@@ -35,7 +35,7 @@ class ReportGenerator:
                 'spiro':             'Spiroergometrie',
                 # Header
                 'report_subtitle':   'Entwicklung der körperlichen Leistungsfähigkeit',
-                'patient_id':        'Patienten-ID',
+                'patient_id':        'ID',
                 'sex_label':         'Geschlecht',
                 'date_label':        'Messung vom',
                 'sex_male':          'Männlich',
