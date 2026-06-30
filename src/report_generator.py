@@ -438,12 +438,12 @@ class ReportGenerator:
         subtitle = Paragraph(f"<para align=center>{subtitle_text}</para>", self.styles['ReportSubTitle'])
         
         # --- LOGOS IM DATA ORDNER SUCHEN ---
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        decade_logo_path = os.path.join(script_dir, '..', 'data', 'decade_logo.jpg')
+        data_dir = os.path.join(os.getcwd(), 'data')
+        decade_logo_path = os.path.join(data_dir, 'decade_logo.jpg')
         if not os.path.exists(decade_logo_path):
-            decade_logo_path = os.path.join(script_dir, '..', 'data', 'decade_logo.png')
+            decade_logo_path = os.path.join(data_dir, 'decade_logo.png')
             
-        unibas_logo_path = os.path.join(script_dir, '..', 'data', 'logo.png')
+        unibas_logo_path = os.path.join(data_dir, 'logo.png')
 
         if os.path.exists(decade_logo_path) and os.path.exists(unibas_logo_path):
             img_decade = Image(decade_logo_path, width=4*cm, height=1.6*cm, kind='proportional')
@@ -720,8 +720,7 @@ class ReportGenerator:
 
     def _build_plot_with_icon(self, metric_key, plot_path):
         """Gibt ein Table-Element zurück: links das Icon (falls vorhanden), rechts der Graph."""
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        icon_path = os.path.join(script_dir, '..', 'data', 'icons', f'{metric_key}.png')
+        icon_path = os.path.join(os.getcwd(), 'data', 'icons', f'{metric_key}.png')
 
         graph_img = Image(plot_path, width=12*cm, height=7.5*cm)
 
@@ -761,10 +760,10 @@ class ReportGenerator:
         p_left  = Paragraph(impressum_text_left,  self.styles['Impressum'])
         p_right = Paragraph(impressum_text_right, self.styles['Impressum'])
 
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        logo_path  = os.path.join(script_dir, '..', 'data', 'decade_logo.jpg')
+        data_dir = os.path.join(os.getcwd(), 'data')
+        logo_path  = os.path.join(data_dir, 'decade_logo.jpg')
         if not os.path.exists(logo_path):
-            logo_path = os.path.join(script_dir, '..', 'data', 'decade_logo.png')
+            logo_path = os.path.join(data_dir, 'decade_logo.png')
 
         img_impressum = ""
         if os.path.exists(logo_path):
@@ -795,8 +794,7 @@ class ReportGenerator:
         elements.append(Paragraph(self._t['intro_grafik'], self.styles['IntroBody']))
 
         # Platzhalter-Bild für das Grafik-Guide
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        guide_img_path = os.path.join(script_dir, '..', 'data', 'report_guide.png')
+        guide_img_path = os.path.join(os.getcwd(), 'data', 'report_guide.png')
         if os.path.exists(guide_img_path):
             elements.append(Spacer(1, 0.3*cm))
             elements.append(Image(guide_img_path, width=12*cm, height=7*cm))
