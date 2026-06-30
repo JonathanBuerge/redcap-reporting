@@ -344,13 +344,52 @@ HANDGRIP_DOM_BOHANNON = {
     }
 }
 
-
+HANDGRIP_REL_POLY_COEFFS = {
+    'girls': {
+        'P3': [0.0001299846183869427, -0.0072279695677871575, 0.12429488121196161, -0.3610172914480336],
+        'P10': [0.0001275409232791607, -0.007006326282259427, 0.11753079360688623, -0.2395051209916768],
+        'P25': [0.00012172096177061135, -0.006630590549325723, 0.1084653351723826, -0.10665277364023629],
+        'P50': [0.000124811196842989, -0.006587910508090475, 0.1029398422937906, 0.024777618988432743],
+        'P75': [0.00012401642803036415, -0.006414884622223722, 0.09608242736899152, 0.16041428153765425],
+        'P90': [0.00012208147040681621, -0.006169494733921476, 0.08834889098069436, 0.2890603589685445],
+        'P97': [0.00011963777529903563, -0.005947851448393812, 0.08158480337561984, 0.41057252942489797],
+    },
+    'boys': {
+        'P3': [0.00013215191739117014, -0.005225011032016459, 0.08005211047721734, -0.1303334073570062],
+        'P10': [5.4667880331751476e-05, -0.002536276519005337, 0.05136242263858625, 0.04739914224082361],
+        'P25': [-8.862087327933033e-06, -0.0003698761329744371, 0.02904208243850265, 0.20046945430731627],
+        'P50': [-0.00010121416519219599, 0.0028440752988822264, -0.005395153603939483, 0.4074316634717535],
+        'P75': [-0.00019183447440739246, 0.006019929976687932, -0.03959261493452016, 0.6139999974039955],
+        'P90': [-0.00025709621071614143, 0.008224427116769701, -0.06215272984646407, 0.76746418470268],
+        'P97': [-0.00033458024777555844, 0.010913161629780758, -0.09084241768509445, 0.9451967343005065],
+    },
+}
 
 # Dynamische Normalisierung für relative Werte (kg/kg)
-def get_relative_handgrip_bohannon(age, sex, weight_kg):
-    """Teilt die absoluten Bohannon-Werte durch das individuelle Probandengewicht."""
-    abs_values = get_smoothed_reference(age, sex, HANDGRIP_DOM_BOHANNON)
-    return tuple(round(val / weight_kg, 2) for val in abs_values)
+def get_relative_handgrip_bohannon(age, sex, weight_kg=None):
+    """Relative Referenz als Polynom über das Alter berechnet.
+    Garantiert vollkommen weiche (stufenlose) Graphen bei hoher Auflösung.
+    Rückgabe als Dictionary {P3..P97} in kg/kg."""
+    
+    # Clip age to bounds
+    a = max(6.0, min(18.0, float(age)))
+    
+    coeffs_dict = HANDGRIP_REL_POLY_COEFFS[sex]
+    rel_values = {}
+    
+    for p, c in coeffs_dict.items():
+        val = c[0]*a**3 + c[1]*a**2 + c[2]*a + c[3]
+        rel_values[p] = round(val, 4)
+        
+    # Sanity-Check:
+    p50_val = rel_values['P50']
+    if abs(a - 10) < 0.01:
+        if not (0.50 <= p50_val <= 0.55):
+            raise ValueError(f"Sanity check failed for age 10: P50={p50_val} (expected 0.50-0.55)")
+    if p50_val > 1.0:
+        raise ValueError(f"Sanity check failed: P50={p50_val} is > 1.0 kg/kg")
+        
+    return rel_values
 
 # ---------------------------------------------------------
 # 8. Körpergrösse (Kromeyer-Hauschild, Deutschland)

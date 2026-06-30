@@ -68,13 +68,16 @@ def _anonymize_and_save(raw_csv_text: str, output_path: str) -> None:
 
 
 def _save_api_metadata(raw_csv_text: str, output_path: str) -> None:
-    """Speichert nur die für das Merging notwendigen Metadaten (Geschlecht)."""
+    """Speichert nur die für das Merging notwendigen Metadaten (Geschlecht, Geburtsdatum und Probanden-ID)."""
     df = pd.read_csv(StringIO(raw_csv_text), sep=',', low_memory=False)
-    sex_cols = ['record_id'] + [c for c in ['q_sex', 'q_sex2'] if c in df.columns]
-    df_meta = df[sex_cols].copy()
+    meta_cols = ['record_id']
+    for col in ['q_sex', 'q_sex2', 'q_birthdate', 'q_probandenid']:
+        if col in df.columns:
+            meta_cols.append(col)
+    df_meta = df[meta_cols].copy()
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     df_meta.to_csv(output_path, index=False)
-    logging.info("API-Metadaten (Geschlecht) gespeichert: %s", output_path)
+    logging.info("API-Metadaten (Geschlecht, Geburtsdatum & Probanden-ID) gespeichert: %s", output_path)
 
 
 def download_and_refresh_data(anonym_path: str, api_path: str) -> bool:

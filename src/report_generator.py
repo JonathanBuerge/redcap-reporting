@@ -574,14 +574,21 @@ class ReportGenerator:
         
         for i, entry in enumerate(history):
             date_val = entry.get('date', '-')
-            try:
-                dt = datetime.strptime(date_val, '%Y-%m-%d')
-                date_str = dt.strftime('%d.%m.%Y')
-            except:
-                date_str = date_val
+            date_str = '-'
+            if date_val and str(date_val) not in ('-', 'nan', 'None'):
+                try:
+                    import pandas as pd
+                    dt = pd.to_datetime(date_val, errors='coerce', format='mixed')
+                    if pd.notna(dt):
+                        date_str = dt.strftime('%d.%m.%Y')
+                    else:
+                        date_str = str(date_val)
+                except:
+                    date_str = str(date_val)
                 
+            mzp_val = entry.get('mzp', str(i+1))
             table_rows.append([
-                f"T{i+1}",
+                mzp_val,
                 date_str,
                 f"{entry['chron_age']:.1f} {t['mat_years']}",
                 f"{entry['bio_age']:.1f} {t['mat_years']}"

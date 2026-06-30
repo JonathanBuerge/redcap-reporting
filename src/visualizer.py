@@ -216,12 +216,11 @@ class Visualizer:
         elif metric_type == 'handkraft_rel':
             title = f"{vt['handkraft_rel_title']} ({sex_label})"
             ylabel = vt['handkraft_rel_ylabel']
-            p_names = ['P3', 'P10', 'P25', 'P50', 'P75', 'P90', 'P97']
             for age in ages:
                 w = patient_weight if patient_weight and patient_weight > 0 else 50.0
-                vals = get_relative_handgrip_bohannon(age, sex, w)
-                for i, p in enumerate(p_names):
-                    percentiles_data[p].append(vals[i])
+                refs = get_relative_handgrip_bohannon(age, sex, w)
+                for p in refs:
+                    percentiles_data[p].append(refs[p])
 
         elif metric_type == 'kreuzheben':
             title = f"{vt['kreuzheben_title']} ({sex_label})"
@@ -437,8 +436,8 @@ class Visualizer:
             weights = [w for _, _, w in all_patients_histories if w and w > 0]
             avg_weight = float(np.mean(weights)) if weights else 40.0
             for age in ages:
-                vals = get_relative_handgrip_bohannon(age, sex, avg_weight)
-                for i, p in enumerate(p_names): percentiles_data[p].append(vals[i])
+                refs = get_relative_handgrip_bohannon(age, sex, avg_weight)
+                for p in refs: percentiles_data[p].append(refs[p])
 
         elif metric_type == 'kreuzheben':
             title, ylabel = f"{vt['kreuzheben_title']} {all_sfx} ({sex_label})", vt['kreuzheben_ylabel']

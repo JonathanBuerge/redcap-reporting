@@ -409,7 +409,7 @@ def main():
     dev_overview: dict[str, list] = {'girls': [], 'boys': []}
 
     # --- NEU: Daten für Übersicht sammeln (ALLE Patienten aus der CSV) ---
-    if GENERATE_OVERVIEW and args.auto:
+    if GENERATE_OVERVIEW:
         logging.info("Sammle Daten für Übersichts-Plots (alle Patienten)...")
         all_ids_in_csv = analyzer.get_all_patient_ids()
         for p_id in all_ids_in_csv:
@@ -533,7 +533,7 @@ def main():
     logging.info("="*50)
 
     # 5. Übersichtsreports pro Geschlecht erstellen
-    if GENERATE_OVERVIEW and args.auto:
+    if GENERATE_OVERVIEW:
         logging.info("="*50)
         logging.info("🔍 Erstelle Gruppen-Übersichtsreports...")
         overview_base = os.path.join(REPORTS_BASE, "_dev_overview")
@@ -655,6 +655,39 @@ def main():
                 logging.debug(traceback.format_exc())
 
         logging.info("Gruppen-Übersichtsreports abgeschlossen.")
+        logging.info("="*50)
+
+        # 6. Leere Übersichtsplots generieren (ohne Kohorte)
+        logging.info("🔍 Erstelle leere Referenzplots (ohne Kohorte)...")
+        leer_base = os.path.join(REPORTS_BASE, "dev_overview_leer")
+        os.makedirs(leer_base, exist_ok=True)
+
+        for sex in ('girls', 'boys'):
+            sex_label = 'Maedchen' if sex == 'girls' else 'Knaben'
+            plots_dir = os.path.join(leer_base, f"plots_{sex_label}")
+            os.makedirs(plots_dir, exist_ok=True)
+
+            for metric_key, filename in PLOTS_CONFIG:
+                plot_path = os.path.join(plots_dir, filename)
+                try:
+                    viz.create_overview_plot(metric_key, [], sex, plot_path)
+                except Exception as e:
+                    logging.error("  Leere Übersicht '%s': Fehler bei %s-Plot: %s", sex, metric_key, e)
+                    logging.debug(traceback.format_exc())
+
+            for ov_key, ov_file, hist_source, req_method in [
+                ('koerperfett_dxa',    'koerperfett_dxa_abs.png',    'koerperfett',   'dxa'),
+                ('knochendichte',      'knochendichte_abs.png',      'knochendichte', 'dxa'),
+                ('koerperfett_inbody', 'koerperfett_inbody_abs.png', 'koerperfett',   'inbody'),
+            ]:
+                ov_path = os.path.join(plots_dir, ov_file)
+                try:
+                    viz.create_overview_plot(ov_key, [], sex, ov_path)
+                except Exception as e:
+                    logging.error("  Leere Übersicht '%s': Fehler bei %s-Plot: %s", sex, ov_key, e)
+                    logging.debug(traceback.format_exc())
+
+        logging.info("Leere Übersichtsplots abgeschlossen.")
         logging.info("="*50)
 
 if __name__ == "__main__":

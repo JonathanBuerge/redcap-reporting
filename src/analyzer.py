@@ -25,7 +25,7 @@ class Analyzer:
         return pd.to_numeric(s, errors='coerce')
 
     def _parse_dates(self, series):
-        return pd.to_datetime(series, errors='coerce')
+        return pd.to_datetime(series, errors='coerce', format='mixed')
 
     def get_all_patient_ids(self):
         if not self.df.empty:
@@ -58,31 +58,26 @@ class Analyzer:
                 logger.warning(f"DATENFEHLER: Patient {p_id} hat kein Geschlecht hinterlegt!")
                 errors_sex += 1
                 
-            # Check Birthdate (global)
-            valid_geb = p_df['crf_geb'].dropna() if 'crf_geb' in p_df.columns else pd.Series(dtype=object)
-            if valid_geb.empty:
-                logger.warning(f"DATENFEHLER: Patient {p_id} hat kein Geburtsdatum (crf_geb) in der gesamten Historie hinterlegt!")
+            # Check Birthdate at MZP1 (Login field)
+            mzp1_rows = p_df[p_df.get('redcap_event_name', '') == 'mzp1_arm_1']
+            valid_q_geb = mzp1_rows['q_birthdate'].dropna() if not mzp1_rows.empty and 'q_birthdate' in mzp1_rows.columns else pd.Series(dtype=object)
+            if valid_q_geb.empty:
+                logger.warning(f"DATENFEHLER: Patient {p_id} hat beim MZP1 kein Geburtsdatum ('q_birthdate') hinterlegt!")
                 errors_birthdate_global += 1
 
             # Check Login Fields at MZP1
-            mzp1_rows = p_df[p_df.get('redcap_event_name', '') == 'mzp1_arm_1']
+            # Hinweis: Die beiden Login-Felder heissen q_probandenid und q_birthdate.
+            # Optionen für andere Settings wie crf_id / crf_geb sind im Kommentar dokumentiert.
             if not mzp1_rows.empty:
-                has_crf_id = False
-                has_birthdate = False
+                has_probanden_id = False
                 
-                if 'crf_id' in mzp1_rows.columns and not mzp1_rows['crf_id'].dropna().empty:
-                    has_crf_id = True
-                    
-                for b_col in ['q_birthdate', 'crf_geb']:
-                    if b_col in mzp1_rows.columns and not mzp1_rows[b_col].dropna().empty:
-                        has_birthdate = True
+                # Zwingende Probanden-ID (Hauptfeld: q_probandenid; Option/Alternative: crf_id)
+                if 'q_probandenid' in mzp1_rows.columns and not mzp1_rows['q_probandenid'].dropna().empty:
+                    has_probanden_id = True
                         
-                if not has_crf_id:
-                    logger.warning(f"DATENFEHLER: Patient {p_id} hat beim MZP1 keine 'crf_id' (Zwingendes Login-Feld fehlt)!")
+                if not has_probanden_id:
+                    logger.warning(f"DATENFEHLER: Patient {p_id} hat beim MZP1 keine 'q_probandenid' (Zwingendes Login-Feld fehlt)!")
                     errors_crf_id_mzp1 += 1
-                if not has_birthdate:
-                    logger.warning(f"DATENFEHLER: Patient {p_id} hat beim MZP1 kein Geburtsdatum 'q_birthdate' / 'crf_geb' (Zwingendes Login-Feld fehlt)!")
-                    errors_birthdate_mzp1 += 1
                 
             # Check measurement dates for rows that have actual data
             for _, row in p_df.iterrows():
@@ -91,21 +86,18 @@ class Analyzer:
                 if has_data:
                     date_val = str(row.get('crf_date', '')).strip() if pd.notna(row.get('crf_date')) else ''
                     ts_val = str(row.get('crf_timestamp', '')).strip() if pd.notna(row.get('crf_timestamp')) else ''
-                    ts_parq = str(row.get('parq_timestamp', '')).strip() if pd.notna(row.get('parq_timestamp')) else ''
                     
-                    if not date_val and not ts_val and not ts_parq:
+                    if not date_val and not ts_val:
                         event = row.get('redcap_event_name', 'Unbekanntes Event')
-                        logger.warning(f"DATENFEHLER: Patient {p_id} hat Messwerte im Event '{event}', aber weder crf_date noch timestamp!")
+                        logger.error(f"❌ KRITISCHER DATENFEHLER: Patient {p_id} hat Messwerte im Event '{event}', aber weder 'crf_timestamp' noch 'crf_date' sind ausgefüllt! (Altersberechnung unmöglich)")
                         errors_measurement_date += 1
 
         if errors_sex == 0:
             logger.info("✅ DATENINTEGRITÄT: Alle Patienten haben ein Geschlecht hinterlegt.")
         if errors_birthdate_global == 0:
-            logger.info("✅ DATENINTEGRITÄT: Alle Patienten haben ein globales Geburtsdatum.")
-        if errors_crf_id_mzp1 == 0:
-            logger.info("✅ DATENINTEGRITÄT: Alle Patienten haben beim MZP1 eine 'crf_id'.")
-        if errors_birthdate_mzp1 == 0:
             logger.info("✅ DATENINTEGRITÄT: Alle Patienten haben beim MZP1 ein Geburtsdatum ('q_birthdate').")
+        if errors_crf_id_mzp1 == 0:
+            logger.info("✅ DATENINTEGRITÄT: Alle Patienten haben beim MZP1 eine 'q_probandenid'.")
         if errors_measurement_date == 0:
             logger.info("✅ DATENINTEGRITÄT: Alle Mess-Events haben ein gültiges crf_date oder timestamp.")
 
@@ -120,27 +112,35 @@ class Analyzer:
 
         is_debug = str(patient_id) in ["decad_105", "105"]
 
-        # --- 1. Zeitachse & Alter berechnen (Wieder mit Timestamps & Fallback) --- Alterative wäre crf_date oder so
+        # --- 1. Zeitachse & Alter berechnen (Nimm crf_timestamp, Fallback: crf_date)
         p_df['age_calculated'] = np.nan
         
         if 'crf_geb' in p_df.columns:
-            # Fallback-Logik: Nimm crf_timestamp, wenn leer nimm parq_timestamp
+            # Fallback-Logik: Nimm crf_timestamp, wenn leer nimm crf_date (parq_timestamp wird ignoriert da ungenau)
             ts_crf = p_df['crf_timestamp'] if 'crf_timestamp' in p_df.columns else pd.Series(np.nan, index=p_df.index)
-            ts_parq = p_df['parq_timestamp'] if 'parq_timestamp' in p_df.columns else pd.Series(np.nan, index=p_df.index)
+            ts_date = p_df['crf_date'] if 'crf_date' in p_df.columns else pd.Series(np.nan, index=p_df.index)
             
             ts_crf = ts_crf.replace(r'^\s*$', np.nan, regex=True)
-            ts_parq = ts_parq.replace(r'^\s*$', np.nan, regex=True)
+            ts_date = ts_date.replace(r'^\s*$', np.nan, regex=True)
             
-            combined_ts = ts_crf.fillna(ts_parq)
+            combined_ts = ts_crf.fillna(ts_date)
+            p_df['mess_date'] = combined_ts
             
             if combined_ts.isna().all() and is_debug:
-                print(f"   [❌ DEBUG ANALYZER] Fehler bei Patient {patient_id}: Weder 'crf_timestamp' noch 'parq_timestamp' enthalten gültige Werte!")
+                print(f"   [❌ DEBUG ANALYZER] Fehler bei Patient {patient_id}: Weder 'crf_timestamp' noch 'crf_date' enthalten gültige Werte!")
 
             mess_dates = self._parse_dates(combined_ts)
             
             # Finde das erste gültige Geburtsdatum (egal bei welchem Messzeitpunkt)
             valid_geb = p_df['crf_geb'].dropna()
-            geb_str = str(valid_geb.iloc[0]) if not valid_geb.empty else ""
+            valid_q_geb = p_df['q_birthdate'].dropna() if 'q_birthdate' in p_df.columns else pd.Series(dtype=object)
+            
+            if not valid_geb.empty:
+                geb_str = str(valid_geb.iloc[0])
+            elif not valid_q_geb.empty:
+                geb_str = str(valid_q_geb.iloc[0])
+            else:
+                geb_str = ""
             
             geb_date = pd.to_datetime(geb_str, errors='coerce')
             
@@ -167,11 +167,11 @@ class Analyzer:
             except: pass
 
         last_date = ""
-        if 'crf_date' in p_df.columns:
-            last_date_raw = p_df['crf_date'].dropna().iloc[-1] if not p_df['crf_date'].dropna().empty else ""
+        if 'mess_date' in p_df.columns:
+            last_date_raw = p_df['mess_date'].dropna().iloc[-1] if not p_df['mess_date'].dropna().empty else ""
             if pd.notna(last_date_raw):
                 try:
-                    last_date = pd.to_datetime(last_date_raw).strftime('%d.%m.%Y')
+                    last_date = pd.to_datetime(last_date_raw, format='mixed').strftime('%d.%m.%Y')
                 except: last_date = str(last_date_raw)
 
         # --- ID Aufbereitung für den Report ---
@@ -301,7 +301,13 @@ class Analyzer:
                     bio_age_eq12 = ref_phv + off_eq12
                     bio_age_eq34 = ref_phv + off_eq34
                     
+                    mzp_num = ""
+                    event = row.get('redcap_event_name', '')
+                    if event and 'mzp' in event:
+                        mzp_num = event.split('_')[0].replace('mzp', '')
+                    
                     maturity_history.append({
+                        "mzp":          mzp_num,
                         "chron_age":    age,
                         # Eq 3/4 (Hauptgleichung, rückwärtskompatibel)
                         "offset":       off_eq34,
@@ -317,7 +323,7 @@ class Analyzer:
                         "raw_w":   round(w,  1),
                         "raw_sh":  round(sh, 1),
                         "raw_leg": round(leg,1),
-                        "date": str(row['crf_date']) if pd.notna(row.get('crf_date')) else results['meta'].get('Messdatum', '-'),
+                        "date": str(row['mess_date']) if pd.notna(row.get('mess_date')) else results['meta'].get('Messdatum', '-'),
                         "f_eq12_str": f_eq12_str,
                         "f_eq34_str": f_eq34_str
                     })

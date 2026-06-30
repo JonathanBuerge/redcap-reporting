@@ -11,7 +11,7 @@ def ensure_patient_dirs(base_dir: str, patient_id: int):
     return patient_dir, plots_dir
 
 def load_merged_data(main_csv: str, api_csv: str = None) -> pd.DataFrame:
-    """Lädt die Hauptdaten und merge Geschlechts-Infos aus der API-Datei falls vorhanden."""
+    """Lädt die Hauptdaten und merged Geschlechts-, Geburtsdatum- sowie Probanden-ID-Infos aus der API-Datei falls vorhanden."""
     if not os.path.exists(main_csv):
         return None
     
@@ -20,16 +20,17 @@ def load_merged_data(main_csv: str, api_csv: str = None) -> pd.DataFrame:
     if api_csv and os.path.exists(api_csv):
         try:
             api_df = pd.read_csv(api_csv, low_memory=False)
-            # Nur record_id und relevante Geschlechts-Spalten nehmen
-            sex_cols = ['record_id'] + [c for c in ['q_sex', 'q_sex2'] if c in api_df.columns]
-            sex_info = api_df[sex_cols].dropna(subset=[c for c in ['q_sex', 'q_sex2'] if c in api_df.columns], how='all')
+            # Nur record_id und relevante Metadaten-Spalten nehmen
+            target_cols = [c for c in ['q_sex', 'q_sex2', 'q_birthdate', 'q_probandenid'] if c in api_df.columns]
+            meta_cols = ['record_id'] + target_cols
+            meta_info = api_df[meta_cols].dropna(subset=target_cols, how='all')
             
             # Gruppieren um pro Patient einen Eintrag zu haben
-            sex_info = sex_info.groupby('record_id').first().reset_index()
+            meta_info = meta_info.groupby('record_id').first().reset_index()
             
             # Mergen
-            df = df.merge(sex_info, on='record_id', how='left')
+            df = df.merge(meta_info, on='record_id', how='left')
         except Exception as e:
-            print(f"⚠️ Warnung beim Laden der Geschlechtsdaten: {e}")
+            print(f"⚠️ Warnung beim Laden der Metadaten (Geschlecht/Geburtsdatum/Probanden-ID): {e}")
             
     return df
