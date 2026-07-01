@@ -419,6 +419,8 @@ def main():
                 if p_sex in dev_overview:
                     dev_overview[p_sex].append((str(p_id), mdata))
 
+    auto_reports_to_upload = []
+
     # 4. Berichte generieren
     for p_id in patient_ids_to_process:
         str_id = str(p_id)
@@ -520,8 +522,12 @@ def main():
             
             # ---> REDCap Upload anstoßen <---
             if not args.no_upload:
-                push_report_to_redcap(str_id, report_file, args.mzp)
-                logging.info(f"Patient {str_id}: Upload-Job für REDCap gesendet.")
+                if args.auto:
+                    auto_reports_to_upload.append((str_id, report_file, args.mzp))
+                    logging.info(f"Patient {str_id}: Upload zur Liste hinzugefügt (wartet auf Bestätigung).")
+                else:
+                    push_report_to_redcap(str_id, report_file, args.mzp)
+                    logging.info(f"Patient {str_id}: Upload-Job für REDCap gesendet.")
             else:
                 logging.info(f"Patient {str_id}: Upload übersprungen (--no-upload aktiv).")
             
@@ -689,6 +695,32 @@ def main():
 
         logging.info("Leere Übersichtsplots abgeschlossen.")
         logging.info("="*50)
+
+    # 7. Upload-Bestätigung für den Auto-Modus
+    if args.auto and auto_reports_to_upload and not args.no_upload:
+        logging.info("="*50)
+        print("\n" + "="*50)
+        print(f"Es wurden {len(auto_reports_to_upload)} Reports lokal erstellt und warten auf den Upload:")
+        for r_id, r_file, r_mzp in auto_reports_to_upload:
+            print(f" - {r_id}")
+        
+        while True:
+            confirm = input("\nMöchtest du diese Reports jetzt zu REDCap hochladen? (j/n): ").strip().lower()
+            if confirm in ['j', 'y', 'ja', 'yes']:
+                logging.info("Upload wurde vom Benutzer bestätigt. Starte Uploads...")
+                for r_id, r_file, r_mzp in auto_reports_to_upload:
+                    try:
+                        push_report_to_redcap(r_id, r_file, r_mzp)
+                        logging.info(f"Patient {r_id}: Upload-Job erfolgreich gesendet.")
+                    except Exception as e:
+                        logging.error(f"Patient {r_id}: Fehler beim Upload. Grund: {e}")
+                break
+            elif confirm in ['n', 'no', 'nein']:
+                logging.info("Upload wurde vom Benutzer abgebrochen. PDFs verbleiben lokal.")
+                print("Upload abgebrochen. Die PDFs liegen im Ordner 'reports/'.")
+                break
+            else:
+                print("Bitte antworte mit 'j' oder 'n'.")
 
 if __name__ == "__main__":
     # Verhindert, dass das Fenster bei einem Doppelklick direkt zugeht
